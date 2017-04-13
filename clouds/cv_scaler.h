@@ -118,7 +118,7 @@ class CvScaler {
   }
 
  private:
-  void UpdateBlendParameters(float knob, float cv);
+  float UpdateBlendParameters(float knob, float cv);
   static const int kAdcLatency = 5;
   
   Adc adc_;

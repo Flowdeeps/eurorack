@@ -39,6 +39,7 @@
 #include "clouds/dsp/fx/reverb.h"
 #include "clouds/dsp/granular_processor.h"
 #include "clouds/dsp/granular_sample_player.h"
+#include "clouds/dsp/kammerl_player.h"
 #include "clouds/dsp/looping_sample_player.h"
 #include "clouds/dsp/pvoc/phase_vocoder.h"
 #include "clouds/dsp/sample_rate_converter.h"
@@ -49,11 +50,12 @@ namespace clouds {
 const int32_t kDownsamplingFactor = 2;
 
 enum PlaybackMode {
-  PLAYBACK_MODE_GRANULAR,
-  PLAYBACK_MODE_STRETCH,
-  PLAYBACK_MODE_LOOPING_DELAY,
-  PLAYBACK_MODE_SPECTRAL,
-  PLAYBACK_MODE_LAST
+  PLAYBACK_MODE_GRANULAR = 0,
+  PLAYBACK_MODE_STRETCH = 1,
+  PLAYBACK_MODE_LOOPING_DELAY = 2,
+  PLAYBACK_MODE_SPECTRAL = 3,
+  PLAYBACK_MODE_KAMMERL = 4,
+  PLAYBACK_MODE_LAST = 5
 };
 
 // State of the recording buffer as saved in one of the 4 sample memories.
@@ -181,6 +183,7 @@ class GranularProcessor {
   WSOLASamplePlayer ws_player_;
   LoopingSamplePlayer looper_;
   PhaseVocoder phase_vocoder_;
+  KammerlPlayer kammerl_;
   
   Diffuser diffuser_;
   Reverb reverb_;
