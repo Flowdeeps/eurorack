@@ -54,13 +54,6 @@ struct Parameters {
     float stereo_spread;
     bool use_deterministic_seed;
   } granular;
-  
-  struct Spectral {
-    float quantization;
-    float refresh_rate;
-    float phase_randomization;
-    float warp;
-  } spectral;
 
   struct Kammerl {
     float probability;

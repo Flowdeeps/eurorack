@@ -48,7 +48,7 @@ PACKAGES       = clouds \
 		stmlib/third_party/STM/CMSIS/DSP_Lib/TransformFunctions
 RESOURCES      = clouds/resources
 
-TOOLCHAIN_PATH ?= /usr/local/arm-4.8.3/
+TOOLCHAIN_PATH ?= ~/bin/gcc-arm-none-eabi-4_8-2013q4/
 
 include stmlib/makefile.inc
 

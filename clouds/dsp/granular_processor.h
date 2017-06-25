@@ -53,7 +53,7 @@ enum PlaybackMode {
   PLAYBACK_MODE_GRANULAR = 0,
   PLAYBACK_MODE_STRETCH = 1,
   PLAYBACK_MODE_LOOPING_DELAY = 2,
-  PLAYBACK_MODE_SPECTRAL = 3,
+  PLAYBACK_MODE_SPECTRAL_CLOUD = 3,
   PLAYBACK_MODE_KAMMERL = 4,
   PLAYBACK_MODE_LAST = 5
 };
@@ -151,6 +151,8 @@ class GranularProcessor {
   void PreparePersistentData();
 
  private:
+  void WarmDistortion(float* in, float parameter);
+
   inline int32_t resolution() const {
     return low_fidelity_ ? 8 : 16;
   }
