@@ -29,10 +29,10 @@ class Env {
   // (ie, value 0..99). The outlevel parameter is calibrated in microsteps
   // (ie units of approx .023 dB), with 99 * 32 = nominal full scale. The
   // rate_scaling parameter is in qRate units (ie 0..63).
-  void init(const int rates[4], const int levels[4], int outlevel,
+  void init(const int rates[4], const int levels[4], int32_t outlevel,
       int rate_scaling);
 
-  void update(const int rates[4], const int levels[4], int outlevel,
+  void update(const int rates[4], const int levels[4], int32_t outlevel,
       int rate_scaling);
   // Result is in Q24/doubling log format. Also, result is subsampled
   // for every N samples.
