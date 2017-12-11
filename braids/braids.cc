@@ -46,12 +46,21 @@
 
 #include "braids/quantizer_scales.h"
 
+#include "Dexed.h"
+#include "synth.h"
+#include "freqlut.h"
+#include "sin.h"
+#include "exp2.h"
+#include "env.h"
+#include "pitchenv.h"
+#include "aligned_buf.h"
+#include "fm_op_kernel.h"
+
 // #define PROFILE_RENDER 1
 
 using namespace braids;
 using namespace std;
 using namespace stmlib;
-
 
 const size_t kNumBlocks = 4;
 const size_t kBlockSize = 24;
@@ -68,6 +77,7 @@ SignatureWaveshaper ws;
 System sys;
 VcoJitterSource jitter_source;
 Ui ui;
+
 
 uint8_t current_scale = 0xff;
 size_t current_sample;

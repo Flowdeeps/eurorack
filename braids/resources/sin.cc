@@ -22,6 +22,40 @@
 
 #define R (1 << 29)
 
+#ifdef SIN_DELTA
+int32_t sintab[SIN_N_SAMPLES << 1];
+#else
+int32_t sintab[SIN_N_SAMPLES + 1];
+#endif
+
+void Sin::init() {
+  double dphase = 2 * M_PI / SIN_N_SAMPLES;
+  int32_t c = (int32_t)floor(cos(dphase) * (1 << 30) + 0.5);
+  int32_t s = (int32_t)floor(sin(dphase) * (1 << 30) + 0.5);
+  int32_t u = 1 << 30;
+  int32_t v = 0;
+  for (int i = 0; i < SIN_N_SAMPLES / 2; i++) {
+#ifdef SIN_DELTA
+    sintab[(i << 1) + 1] = (v + 32) >> 6;
+    sintab[((i + SIN_N_SAMPLES / 2) << 1) + 1] = -((v + 32) >> 6);
+#else
+    sintab[i] = (v + 32) >> 6;
+    sintab[i + SIN_N_SAMPLES / 2] = -((v + 32) >> 6);
+#endif
+    int32_t t = ((int64_t)u * (int64_t)s + (int64_t)v * (int64_t)c + R) >> 30;
+    u = ((int64_t)u * (int64_t)c - (int64_t)v * (int64_t)s + R) >> 30;
+    v = t;
+  }
+#ifdef SIN_DELTA
+  for (int i = 0; i < SIN_N_SAMPLES - 1; i++) {
+    sintab[i << 1] = sintab[(i << 1) + 3] - sintab[(i << 1) + 1];
+  }
+  sintab[(SIN_N_SAMPLES << 1) - 2] = -sintab[(SIN_N_SAMPLES << 1) - 1];
+#else
+  sintab[SIN_N_SAMPLES] = 0;
+#endif
+}
+
 #ifndef SIN_INLINE
 int32_t Sin::lookup(int32_t phase) {
   const int SHIFT = 24 - SIN_LG_N_SAMPLES;

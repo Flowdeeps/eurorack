@@ -26,9 +26,9 @@
 #define exp2(arg) pow(2.0, arg)
 #endif
 
-
-
+#ifdef DUMPTABLES
 int32_t exp2tab[EXP2_N_SAMPLES << 1];
+#endif
 
 void Exp2::init() {
   double inc = exp2(1.0 / EXP2_N_SAMPLES);
@@ -43,7 +43,9 @@ void Exp2::init() {
   exp2tab[(EXP2_N_SAMPLES << 1) - 2] = (1U << 31) - exp2tab[(EXP2_N_SAMPLES << 1) - 1];
 }
 
+#ifdef DUMPTABLES
 int32_t tanhtab[TANH_N_SAMPLES << 1];
+#endif
 
 static double dtanh(double y) {
   return 1 - y * y;
