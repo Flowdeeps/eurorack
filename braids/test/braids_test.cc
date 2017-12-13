@@ -18,7 +18,7 @@
 #include <cstring>
 #include <cstdlib>
 
-#include "braids/macro_oscillator.h"
+#include "braids/dexed_audio_processor.h"
 #include "braids/quantizer.h"
 #include "stmlib/test/wav_writer.h"
 #include "stmlib/utils/dsp.h"
@@ -30,17 +30,16 @@ const uint32_t kSampleRate = 96000;
 const uint16_t kAudioBlockSize = 24;
 
 void TestAudioRendering() {
-  MacroOscillator osc;
+  DexedAudioProcessor osc;
   WavWriter wav_writer(1, kSampleRate, 5);
   wav_writer.Open("oscillator.wav");
 
-  osc.Init();
-  osc.set_shape(MACRO_OSC_SHAPE_VOWEL_FOF);
+  osc.prepareToPlay(96000, kAudioBlockSize);
 
   for (uint32_t i = 0; i < kSampleRate * 5 / kAudioBlockSize; ++i) {
-    /*if ((i % 2000) == 0) {
+    if ((i % 2000) == 0) {
       osc.Strike();
-    }*/
+    }
     int16_t buffer[kAudioBlockSize];
     uint8_t sync_buffer[kAudioBlockSize];
     uint16_t tri = (i * 3);

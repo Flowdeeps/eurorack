@@ -44,17 +44,10 @@ DexedAudioProcessor::DexedAudioProcessor() {
     TRACE("Hi");
 #endif
 
-    lastStateSave = 0;
     currentNote = -1;
-    engineType = -1;
-    
-    vuSignal = 0;
-    monoMode = 0;
-    
+        
     TRACE("controler %s", controllers.opSwitch);
     
-    initCtrl();
-    sendSysexChange = true;
     normalizeDxVelocity = false;
     showKeyboard = true;
     
@@ -65,16 +58,9 @@ DexedAudioProcessor::DexedAudioProcessor() {
     controllers.values_[kControllerPitchStep] = 0;
     controllers.masterTune = 0;
 
-    loadPreference();
-
-    for (int note = 0; note < MAX_ACTIVE_NOTES; ++note) {
-        voices[note].dx7_note = NULL;
-    }
-    setCurrentProgram(0);    
     //nextMidi = NULL;
     //midiMsg = NULL;
 
-    clipboardContent = -1;
 }
 
 DexedAudioProcessor::~DexedAudioProcessor() {
@@ -83,14 +69,13 @@ DexedAudioProcessor::~DexedAudioProcessor() {
 
 //==============================================================================
 void DexedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
-    Freqlut::init(sampleRate);
+    //Freqlut::init(sampleRate);
     Lfo::init(sampleRate);
     PitchEnv::init(sampleRate);
     Env::init_sr(sampleRate);
     //fx.init(sampleRate);
     
     for (int note = 0; note < MAX_ACTIVE_NOTES; ++note) {
-        voices[note].dx7_note = new Dx7Note;
         voices[note].keydown = false;
         voices[note].sustained = false;
         voices[note].live = false;
@@ -102,9 +87,10 @@ void DexedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) 
     controllers.foot_cc = 0;
     controllers.breath_cc = 0;
     controllers.aftertouch_cc = 0;
+
+    extra_buf_size = 0;
     
     sustain = false;
-    extra_buf_size = 0;
     
     lfo.reset(data + 137);
 }
@@ -113,36 +99,31 @@ void DexedAudioProcessor::releaseResources() {
     currentNote = -1;
 
     for (int note = 0; note < MAX_ACTIVE_NOTES; ++note) {
-        if ( voices[note].dx7_note != NULL ) {
-            delete voices[note].dx7_note;
-            voices[note].dx7_note = NULL;
-        }
         voices[note].keydown = false;
         voices[note].sustained = false;
         voices[note].live = false;
     }
 }
 
-void DexedAudioProcessor::processBlock(AudioSampleBuffer& buffer, MidiBuffer& midiMessages) {
-    int numSamples = buffer.getNumSamples();
-    int i;
+void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelData, size_t numSamples) {
+    unsigned int i;
     
     if ( refreshVoice ) {
         for(i=0;i < MAX_ACTIVE_NOTES;i++) {
             if ( voices[i].live )
-                voices[i].dx7_note->update(data, voices[i].midi_note, voices[i].velocity);
+                voices[i].dx7_note.update(data, voices[i].midi_note, voices[i].velocity);
         }
         lfo.reset(data + 137);
         refreshVoice = false;
     }
 
-    keyboardState.processNextMidiBuffer(midiMessages, 0, numSamples, true);
-    
-    MidiBuffer::Iterator it(midiMessages);
-    hasMidiMessage = it.getNextEvent(*nextMidi,midiEventPos);
+    if (noteStart_) {
+        keydown(64,128);
+        noteStart_ = false;
+    }
 
-    float *channelData = buffer.getWritePointer(0);
-  
+    // todo apply params
+
     // flush first events
     for (i=0; i < numSamples && i < extra_buf_size; i++) {
         channelData[i] = extra_buf[i];
@@ -150,164 +131,123 @@ void DexedAudioProcessor::processBlock(AudioSampleBuffer& buffer, MidiBuffer& mi
     
     // remaining buffer is still to be processed
     if (extra_buf_size > numSamples) {
-        for (int j = 0; j < extra_buf_size - numSamples; j++) {
+        for (unsigned int j = 0; j < extra_buf_size - numSamples; j++) {
             extra_buf[j] = extra_buf[j + numSamples];
         }
         extra_buf_size -= numSamples;
-        
-        // flush the events, they will be process in the next cycle
-        while(getNextEvent(&it, numSamples)) {
-            processMidiMessage(midiMsg);
-        }
     } else {
         for (; i < numSamples; i += N) {
-            AlignedBuf<int32_t, N> audiobuf;
-            float sumbuf[N];
-            
-            while(getNextEvent(&it, i)) {
-                processMidiMessage(midiMsg);
-            }
+            int32_t audiobuf[N];
+            //float sumbuf[N];
             
             for (int j = 0; j < N; ++j) {
-                audiobuf.get()[j] = 0;
-                sumbuf[j] = 0;
+                audiobuf[j] = 0;
+                //sumbuf[j] = 0;
             }
             int32_t lfovalue = lfo.getsample();
             int32_t lfodelay = lfo.getdelay();
             
             for (int note = 0; note < MAX_ACTIVE_NOTES; ++note) {
                 if (voices[note].live) {
-                    voices[note].dx7_note->compute(audiobuf.get(), lfovalue, lfodelay, &controllers);
+                    voices[note].dx7_note.compute(&audiobuf[0], lfovalue, lfodelay, &controllers);
                     
-                    for (int j=0; j < N; ++j) {
-                        int32_t val = audiobuf.get()[j];
+                    // for (int j=0; j < N; ++j) {
+                    //     int32_t val = audiobuf[j];
                         
-                        val = val >> 4;
-                        int clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
-                        float f = ((float) clip_val) / (float) 0x8000;
-                        if( f > 1 ) f = 1;
-                        if( f < -1 ) f = -1;
-                        sumbuf[j] += f;
-                        audiobuf.get()[j] = 0;
-                    }
+                    //     val = val >> 4;
+                    //     int clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
+                    //     float f = ((float) clip_val) / (float) 0x8000;
+                    //     if( f > 1 ) f = 1;
+                    //     if( f < -1 ) f = -1;
+                    //     sumbuf[j] += f;
+                    //     audiobuf[j] = 0;
+                    // }
                 }
             }
             
+            // int jmax = numSamples - i;
+            // for (int j = 0; j < N; ++j) {
+            //     if (j < jmax) {
+            //         channelData[i + j] = sumbuf[j];
+            //     } else {
+            //         extra_buf[j - jmax] = sumbuf[j];
+            //     }
+            // }
             int jmax = numSamples - i;
             for (int j = 0; j < N; ++j) {
                 if (j < jmax) {
-                    channelData[i + j] = sumbuf[j];
+                    channelData[i + j] = audiobuf[j];
                 } else {
-                    extra_buf[j - jmax] = sumbuf[j];
+                    extra_buf[j - jmax] = audiobuf[j];
                 }
             }
         }
         extra_buf_size = i - numSamples;
     }
-    
-    while(getNextEvent(&it, numSamples)) {
-        processMidiMessage(midiMsg);
-    }
-
-    fx.process(channelData, numSamples);
-    for(i=0; i<numSamples; i++) {
-        float s = std::abs(channelData[i]);
-        
-        const double decayFactor = 0.99992;
-        if (s > vuSignal)
-            vuSignal = s;
-        else if (vuSignal > 0.001f)
-            vuSignal *= decayFactor;
-        else
-            vuSignal = 0;
-    }
-    
-    // DX7 is a mono synth
-    buffer.copyFrom(1, 0, channelData, numSamples, 1);
 }
 
+// void DexedAudioProcessor::processMidiMessage(const MidiMessage *msg) {
+//     const uint8 *buf  = msg->getRawData();
+//     uint8_t cmd = buf[0];
 
-//==============================================================================
-// This creates new instances of the plugin..
-AudioProcessor* JUCE_CALLTYPE createPluginFilter() {
-    return new DexedAudioProcessor();
-}
+//     switch(cmd & 0xf0) {
+//         case 0x80 :
+//             keyup(buf[1]);
+//         return;
 
-bool DexedAudioProcessor::getNextEvent(MidiBuffer::Iterator* iter,const int samplePos) {
-	if (hasMidiMessage && midiEventPos <= samplePos) {
-		*midiMsg = *nextMidi;
-		hasMidiMessage = iter->getNextEvent(*nextMidi, midiEventPos);
-		return true;
-	}
-	return false;
-}
-
-void DexedAudioProcessor::processMidiMessage(const MidiMessage *msg) {
-    const uint8 *buf  = msg->getRawData();
-    uint8_t cmd = buf[0];
-
-    switch(cmd & 0xf0) {
-        case 0x80 :
-            keyup(buf[1]);
-        return;
-
-        case 0x90 :
-            keydown(buf[1], buf[2]);
-        return;
+//         case 0x90 :
+//             keydown(buf[1], buf[2]);
+//         return;
             
-        case 0xb0 : {
-            int ctrl = buf[1];
-            int value = buf[2];
+//         case 0xb0 : {
+//             int ctrl = buf[1];
+//             int value = buf[2];
             
-            switch(ctrl) {
-                case 1:
-                    controllers.modwheel_cc = value;
-                    controllers.refresh();
-                    break;
-                case 2:
-                    controllers.breath_cc = value;
-                    controllers.refresh();
-                    break;
-                case 4:
-                    controllers.foot_cc = value;
-                    controllers.refresh();
-                    break;
-                case 64:
-                    sustain = value > 63;
-                    if (!sustain) {
-                        for (int note = 0; note < MAX_ACTIVE_NOTES; note++) {
-                            if (voices[note].sustained && !voices[note].keydown) {
-                                voices[note].dx7_note->keyup();
-                                voices[note].sustained = false;
-                            }
-                        }
-                    }
-                    break;
-                case 123:
-                    panic();
-                    break;
-            }
-        }
-        return;
+//             switch(ctrl) {
+//                 case 1:
+//                     controllers.modwheel_cc = value;
+//                     controllers.refresh();
+//                     break;
+//                 case 2:
+//                     controllers.breath_cc = value;
+//                     controllers.refresh();
+//                     break;
+//                 case 4:
+//                     controllers.foot_cc = value;
+//                     controllers.refresh();
+//                     break;
+//                 case 64:
+//                     sustain = value > 63;
+//                     if (!sustain) {
+//                         for (int note = 0; note < MAX_ACTIVE_NOTES; note++) {
+//                             if (voices[note].sustained && !voices[note].keydown) {
+//                                 voices[note].dx7_note.keyup();
+//                                 voices[note].sustained = false;
+//                             }
+//                         }
+//                     }
+//                     break;
+//                 case 123:
+//                     panic();
+//                     break;
+//             }
+//         }
+//         return;
+            
+//         // aftertouch
+//         case 0xd0 :
+//             controllers.aftertouch_cc = buf[1];
+//             controllers.refresh();
+//         return;
+            
+//     }
 
-        case 0xc0 :
-            setCurrentProgram(buf[1]);
-        return;
-            
-        // aftertouch
-        case 0xd0 :
-            controllers.aftertouch_cc = buf[1];
-            controllers.refresh();
-        return;
-            
-    }
-
-    switch (cmd) {
-        case 0xe0 :
-            controllers.values_[kControllerPitch] = buf[1] | (buf[2] << 7);
-        break;
-    }
-}
+//     switch (cmd) {
+//         case 0xe0 :
+//             controllers.values_[kControllerPitch] = buf[1] | (buf[2] << 7);
+//         break;
+//     }
+// }
 
 void DexedAudioProcessor::keydown(uint8_t pitch, uint8_t velo) {
     if ( velo == 0 ) {
@@ -330,9 +270,9 @@ void DexedAudioProcessor::keydown(uint8_t pitch, uint8_t velo) {
             voices[note].velocity = velo;
             voices[note].sustained = sustain;
             voices[note].keydown = true;
-            voices[note].dx7_note->init(data, pitch, velo);
+            voices[note].dx7_note.init(data, pitch, velo);
             if ( data[136] )
-                voices[note].dx7_note->oscSync();
+                voices[note].dx7_note.oscSync();
             break;
         }
         note = (note + 1) % MAX_ACTIVE_NOTES;
@@ -344,12 +284,12 @@ void DexedAudioProcessor::keydown(uint8_t pitch, uint8_t velo) {
                 // all keys are up, only transfert signal
                 if ( ! voices[i].keydown ) {
                     voices[i].live = false;
-                    voices[note].dx7_note->transferSignal(*voices[i].dx7_note);
+                    voices[note].dx7_note.transferSignal(voices[i].dx7_note);
                     break;
                 }
                 if ( voices[i].midi_note < pitch ) {
                     voices[i].live = false;
-                    voices[note].dx7_note->transferState(*voices[i].dx7_note);
+                    voices[note].dx7_note.transferState(voices[i].dx7_note);
                     break;
                 }
                 return;
@@ -390,14 +330,14 @@ void DexedAudioProcessor::keyup(uint8_t pitch) {
         if ( highNote != -1 ) {
             voices[note].live = false;
             voices[target].live = true;
-            voices[target].dx7_note->transferState(*voices[note].dx7_note);
+            voices[target].dx7_note.transferState(voices[note].dx7_note);
         }
     }
     
     if ( sustain ) {
         voices[note].sustained = true;
     } else {
-        voices[note].dx7_note->keyup();
+        voices[note].dx7_note.keyup();
     }
 }
 
@@ -405,9 +345,7 @@ void DexedAudioProcessor::panic() {
     for(int i=0;i<MAX_ACTIVE_NOTES;i++) {
         voices[i].keydown = false;
         voices[i].live = false;
-        if ( voices[i].dx7_note != NULL ) {
-            voices[i].dx7_note->oscSync();
-        }
+        voices[i].dx7_note.oscSync();
     }
 }
 
@@ -422,19 +360,8 @@ void DexedAudioProcessor::setEngineType(int tp) {
         case DEXED_ENGINE_MARKI:
             controllers.core = &engineMkI;
             break;
-        case DEXED_ENGINE_OPL:
-            controllers.core = &engineOpl;
-            break;
-        default:
-            controllers.core = &engineMsfa;
-            break;
     }
     engineType = tp;
-}
-
-void DexedAudioProcessor::setMonoMode(bool mode) {
-    panic();
-    monoMode = mode;
 }
 
 // ====================================================================
@@ -446,7 +373,7 @@ bool DexedAudioProcessor::peekVoiceStatus() {
     int note = currentNote;
     for (int i = 0; i < MAX_ACTIVE_NOTES; i++) {
         if (voices[note].keydown) {
-            voices[note].dx7_note->peekVoiceStatus(voiceStatus);
+            voices[note].dx7_note.peekVoiceStatus(voiceStatus);
             return true;
         }
         if ( --note < 0 )
@@ -457,7 +384,7 @@ bool DexedAudioProcessor::peekVoiceStatus() {
     note = currentNote;
     for (int i = 0; i < MAX_ACTIVE_NOTES; i++) {
         if (voices[note].live) {
-            voices[note].dx7_note->peekVoiceStatus(voiceStatus);
+            voices[note].dx7_note.peekVoiceStatus(voiceStatus);
             return true;
         }
         if ( --note < 0 )
@@ -465,85 +392,4 @@ bool DexedAudioProcessor::peekVoiceStatus() {
     }
 
     return true;
-}
-
-const String DexedAudioProcessor::getInputChannelName (int channelIndex) const {
-    return String (channelIndex + 1);
-}
-
-const String DexedAudioProcessor::getOutputChannelName (int channelIndex) const {
-    return String (channelIndex + 1);
-}
-
-bool DexedAudioProcessor::isInputChannelStereoPair (int index) const {
-    return true;
-}
-
-bool DexedAudioProcessor::isOutputChannelStereoPair (int index) const {
-    return true;
-}
-
-bool DexedAudioProcessor::acceptsMidi() const {
-#if JucePlugin_WantsMidiInput
-    return true;
-#else
-    return false;
-#endif
-}
-
-bool DexedAudioProcessor::producesMidi() const {
-#if JucePlugin_ProducesMidiOutput
-    return true;
-#else
-    return false;
-#endif
-}
-
-bool DexedAudioProcessor::silenceInProducesSilenceOut() const {
-    return false;
-}
-
-double DexedAudioProcessor::getTailLengthSeconds() const {
-    return 0.0;
-}
-
-const String DexedAudioProcessor::getName() const {
-    return JucePlugin_Name;
-}
-
-//==============================================================================
-bool DexedAudioProcessor::hasEditor() const {
-    return true; // (change this to false if you choose to not supply an editor)
-}
-
-void DexedAudioProcessor::updateUI() {
-    // notify host something has changed
-    updateHostDisplay();
- 
-    AudioProcessorEditor *editor = getActiveEditor();
-    if ( editor == NULL ) {
-        return;
-    }
-	DexedAudioProcessorEditor *dexedEditor = (DexedAudioProcessorEditor *) editor;
-    dexedEditor->updateUI();
-}
-
-AudioProcessorEditor* DexedAudioProcessor::createEditor() {
-    return new DexedAudioProcessorEditor (this);
-}
-
-void DexedAudioProcessor::handleAsyncUpdate() {
-    updateUI();
-}
-
-void dexed_trace(const char *source, const char *fmt, ...) {
-    char output[4096];
-    va_list argptr;
-    va_start(argptr, fmt);
-    vsnprintf(output, 4095, fmt, argptr);
-    va_end(argptr);
-
-    String dest;
-    dest << source << " " << output;
-    Logger::writeToLog(dest);
 }

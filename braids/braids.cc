@@ -46,16 +46,7 @@
 
 #include "braids/quantizer_scales.h"
 
-#include "Dexed.h"
-#include "synth.h"
-#include "freqlut.h"
-#include "sin.h"
-#include "exp2.h"
-#include "env.h"
-#include "pitchenv.h"
-#include "aligned_buf.h"
-#include "fm_op_kernel.h"
-
+#include "dexed_audio_processor.h"
 // #define PROFILE_RENDER 1
 
 using namespace braids;
@@ -65,7 +56,7 @@ using namespace stmlib;
 const size_t kNumBlocks = 4;
 const size_t kBlockSize = 24;
 
-MacroOscillator osc;
+//MacroOscillator osc;
 Envelope envelope;
 Adc adc;
 Dac dac;
@@ -77,7 +68,7 @@ SignatureWaveshaper ws;
 System sys;
 VcoJitterSource jitter_source;
 Ui ui;
-
+DexedAudioProcessor osc;
 
 uint8_t current_scale = 0xff;
 size_t current_sample;
@@ -158,7 +149,7 @@ void Init() {
   debug_pin.Init();
 #endif
   dac.Init();
-  osc.Init();
+  //osc.Init();
   quantizer.Init();
   internal_adc.Init();
   
@@ -171,6 +162,8 @@ void Init() {
   current_sample = 0;
   
   envelope.Init();
+  osc.prepareToPlay(96000, kBlockSize);
+
   ws.Init(GetUniqueId(1));
   jitter_source.Init();
   sys.StartTimers();
@@ -189,7 +182,6 @@ const uint16_t decimation_factors[] = { 24, 12, 6, 4, 3, 2, 1 };
 
 void RenderBlock() {
   static int16_t previous_pitch = 0;
-  static int16_t previous_shape = 0;
   static uint16_t gain_lp;
 
 #ifdef PROFILE_RENDER
@@ -200,29 +192,29 @@ void RenderBlock() {
       settings.GetValue(SETTING_AD_DECAY) * 8);
   uint32_t ad_value = envelope.Render();
   
-  if (ui.paques()) {
-    osc.set_shape(MACRO_OSC_SHAPE_QUESTION_MARK);
-  } else if (settings.meta_modulation()) {
-    int16_t shape = adc.channel(3);
-    shape -= settings.data().fm_cv_offset;
-    if (shape > previous_shape + 2 || shape < previous_shape - 2) {
-      previous_shape = shape;
-    } else {
-      shape = previous_shape;
-    }
-    shape = MACRO_OSC_SHAPE_LAST * shape >> 11;
-    shape += settings.shape();
-    if (shape >= MACRO_OSC_SHAPE_LAST_ACCESSIBLE_FROM_META) {
-      shape = MACRO_OSC_SHAPE_LAST_ACCESSIBLE_FROM_META;
-    } else if (shape <= 0) {
-      shape = 0;
-    }
-    MacroOscillatorShape osc_shape = static_cast<MacroOscillatorShape>(shape);
-    osc.set_shape(osc_shape);
-    ui.set_meta_shape(osc_shape);
-  } else {
-    osc.set_shape(settings.shape());
-  }
+  // if (ui.paques()) {
+  //   osc.set_shape(MACRO_OSC_SHAPE_QUESTION_MARK);
+  // } else if (settings.meta_modulation()) {
+  //   int16_t shape = adc.channel(3);
+  //   shape -= settings.data().fm_cv_offset;
+  //   if (shape > previous_shape + 2 || shape < previous_shape - 2) {
+  //     previous_shape = shape;
+  //   } else {
+  //     shape = previous_shape;
+  //   }
+  //   shape = MACRO_OSC_SHAPE_LAST * shape >> 11;
+  //   shape += settings.shape();
+  //   if (shape >= MACRO_OSC_SHAPE_LAST_ACCESSIBLE_FROM_META) {
+  //     shape = MACRO_OSC_SHAPE_LAST_ACCESSIBLE_FROM_META;
+  //   } else if (shape <= 0) {
+  //     shape = 0;
+  //   }
+  //   MacroOscillatorShape osc_shape = static_cast<MacroOscillatorShape>(shape);
+  //   osc.set_shape(osc_shape);
+  //   ui.set_meta_shape(osc_shape);
+  // } else {
+  //   osc.set_shape(settings.shape());
+  // }
   
   // Set timbre and color: CV + internal modulation.
   uint16_t parameters[2];
@@ -233,6 +225,7 @@ void RenderBlock() {
     CONSTRAIN(value, 0, 32767);
     parameters[i] = value;
   }
+
   osc.set_parameters(parameters[0], parameters[1]);
   
   // Apply hysteresis to ADC reading to prevent a single bit error to move

@@ -17,8 +17,8 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#include "synth.h"
-#include "exp2.h"
+// #include "../synth.h"
+#include "../exp2.h"
 
 #include <stdio.h>
 

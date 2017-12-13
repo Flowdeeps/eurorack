@@ -22,6 +22,8 @@
 
 #define R (1 << 29)
 
+ 
+
 #ifndef SIN_INLINE
 int32_t Sin::lookup(int32_t phase) {
   const int SHIFT = 24 - SIN_LG_N_SAMPLES;

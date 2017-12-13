@@ -5,13 +5,24 @@ VPATH          = $(PACKAGES)
 TARGET         = braids_test
 BUILD_ROOT     = build/
 BUILD_DIR      = $(BUILD_ROOT)$(TARGET)/
-CC_FILES       = analog_oscillator.cc \
-		digital_oscillator.cc \
-		macro_oscillator.cc \
+CC_FILES       = dexed_audio_processor.cc \
+		dx7note.cc \
+		dexed_lut.cc \
+		EngineMkI.cc \
+		fm_core.cc \
+		freqlut.cc \
+		lfo.cc \
 		braids_test.cc \
 		quantizer.cc \
 		resources.cc \
-		random.cc
+		random.cc \
+		pitchenv.cc \
+		env.cc \
+		fm_op_kernel.cc \
+		sin.cc
+
+
+
 OBJ_FILES      = $(CC_FILES:.cc=.o)
 OBJS           = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)
 DEPS           = $(OBJS:.o=.d)

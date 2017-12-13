@@ -39,26 +39,26 @@ const int32_t coarsemul[] = {
     81503396, 82323963, 83117622
 };
 
-int32_t osc_freq(int midinote, int mode, int coarse, int fine, int detune) {
-    // TODO: pitch randomization
-    int32_t logfreq;
-    if (mode == 0) {
-        logfreq = midinote_to_logfreq(midinote);
-        logfreq += coarsemul[coarse & 31];
-        if (fine) {
-            // (1 << 24) / log(2)
-            logfreq += (int32_t)floor(24204406.323123 * log(1 + 0.01 * fine) + 0.5);
-        }
-        // This was measured at 7.213Hz per count at 9600Hz, but the exact
-        // value is somewhat dependent on midinote. Close enough for now.
-        logfreq += 12606 * (detune - 7);
-    } else {
-        // ((1 << 24) * log(10) / log(2) * .01) << 3
-        logfreq = (4458616 * ((coarse & 3) * 100 + fine)) >> 3;
-        logfreq += detune > 7 ? 13457 * (detune - 7) : 0;
-    }
-    return logfreq;
-}
+// int32_t osc_freq(int midinote, int mode, int coarse, int fine, int detune) {
+//     // TODO: pitch randomization
+//     int32_t logfreq;
+//     if (mode == 0) {
+//         logfreq = midinote_to_logfreq(midinote);
+//         logfreq += coarsemul[coarse & 31];
+//         if (fine) {
+//             // (1 << 24) / log(2)
+//             logfreq += (int32_t)floor(24204406.323123 * log(1 + 0.01 * fine) + 0.5);
+//         }
+//         // This was measured at 7.213Hz per count at 9600Hz, but the exact
+//         // value is somewhat dependent on midinote. Close enough for now.
+//         logfreq += 12606 * (detune - 7);
+//     } else {
+//         // ((1 << 24) * log(10) / log(2) * .01) << 3
+//         logfreq = (4458616 * ((coarse & 3) * 100 + fine)) >> 3;
+//         logfreq += detune > 7 ? 13457 * (detune - 7) : 0;
+//     }
+//     return logfreq;
+// }
 
 const uint8_t velocity_data[64] = {
     0, 70, 86, 97, 106, 114, 121, 126, 132, 138, 142, 148, 152, 156, 160, 163,
@@ -159,11 +159,11 @@ void Dx7Note::init(const uint8_t patch[156], int midinote, int velocity) {
         int rate_scaling = ScaleRate(midinote, patch[off + 13]);
         env_[op].init(rates, levels, outlevel, rate_scaling);
         
-        int mode = patch[off + 17];
-        int coarse = patch[off + 18];
-        int fine = patch[off + 19];
-        int detune = patch[off + 20];
-        int32_t freq = osc_freq(midinote, mode, coarse, fine, detune);
+        // int mode = patch[off + 17];
+        // int coarse = patch[off + 18];
+        // int fine = patch[off + 19];
+        // int detune = patch[off + 20];
+        int32_t freq = 123470783; //osc_freq(midinote, mode, coarse, fine, detune);
         basepitch_[op] = freq;
         ampmodsens_[op] = ampmodsenstab[patch[off + 14] & 3];
     }
@@ -227,10 +227,10 @@ void Dx7Note::compute(int32_t *buf, int32_t lfo_val, int32_t lfo_delay, const Co
             
             int32_t level = env_[op].getsample();
             if (ampmodsens_[op] != 0) {
-                uint32_t sensamp = ((uint64_t) amd_mod) * ((uint64_t) ampmodsens_[op]) >> 24;
+                //uint32_t sensamp = ((uint64_t) amd_mod) * ((uint64_t) ampmodsens_[op]) >> 24;
                 
                 // TODO: mehhh.. this needs some real tuning.
-                uint32_t pt = exp(((float)sensamp)/262144 * 0.07 + 12.2);
+                uint32_t pt = 1;// fm_exp(((float)sensamp)/262144 * 0.07 + 12.2);
                 uint32_t ldiff = ((uint64_t)level) * (((uint64_t)pt<<4)) >> 28;
                 level -= ldiff;
             }
@@ -252,11 +252,11 @@ void Dx7Note::update(const uint8_t patch[156], int midinote, int velocity) {
     int levels[4];
     for (int op = 0; op < 6; op++) {
         int off = op * 21;
-        int mode = patch[off + 17];
-        int coarse = patch[off + 18];
-        int fine = patch[off + 19];
-        int detune = patch[off + 20];
-        basepitch_[op] = osc_freq(midinote, mode, coarse, fine, detune);
+        // int mode = patch[off + 17];
+        // int coarse = patch[off + 18];
+        // int fine = patch[off + 19];
+        // int detune = patch[off + 20];
+        basepitch_[op] = 123470783; //osc_freq(midinote, mode, coarse, fine, detune);
         ampmodsens_[op] = ampmodsenstab[patch[off + 14] & 3];
         
         for (int i = 0; i < 4; i++) {

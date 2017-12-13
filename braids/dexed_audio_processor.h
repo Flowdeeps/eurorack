@@ -28,7 +28,7 @@
 #include "lfo.h"
 #include "synth.h"
 #include "fm_core.h"
-// #include "PluginParam.h"
+#include "PluginParam.h"
 // #include "PluginData.h"
 // #include "PluginFx.h"
 // #include "SysexComm.h"
@@ -40,7 +40,7 @@ struct ProcessorVoice {
     bool keydown;
     bool sustained;
     bool live;
-    Dx7Note *dx7_note;
+    Dx7Note dx7_note;
 };
 
 enum DexedEngineResolution {
@@ -61,18 +61,6 @@ class DexedAudioProcessor
     Lfo lfo;
 
     bool sustain;
-    bool monoMode;
-    
-    // Extra buffering for when GetSamples wants a buffer not a multiple of N
-    float extra_buf[N];
-    int extra_buf_size;
-
-    int currentProgram;
-    
-    /**
-     * The last time the state was save, to be able to bypass a VST host bug.
-     */
-    long lastStateSave;
     
     /**
      * Plugin fx (the filter)
@@ -85,43 +73,37 @@ class DexedAudioProcessor
      */
     bool refreshVoice;
     bool normalizeDxVelocity;
-    bool sendSysexChange;
     
-  //  void processMidiMessage(const MidiMessage *msg);
     void keydown(uint8_t pitch, uint8_t velo);
     void keyup(uint8_t pitch);
     
-    /**
-     * this is called from the Audio thread to tell
-     * to update the UI / hostdata 
-     */
-   // void handleAsyncUpdate();
     void initCtrl();
 
-	//MidiMessage* nextMidi,*midiMsg;
-	//bool hasMidiMessage;
-    //int midiEventPos;
-	//bool getNextEvent(MidiBuffer::Iterator* iter,const int samplePos);
-    
-    //void handleIncomingMidiMessage(MidiInput* source, const MidiMessage& message);
+	
     uint32_t engineType;
     
-    FmCore engineMsfa;
     EngineMkI engineMkI;
-    
-    char clipboard[161];
-    char clipboardContent;
     
     void resolvAppDir();
     
     void unpackOpSwitch(char packOpValue);
     void packOpSwitch();
+
+    int16_t parameter_[2];
+    int16_t pitch_;
+
+    bool noteStart_;
     
 public :
     // in MIDI units (0x4000 is neutral)
     Controllers controllers;
-    // StringArray programNames;
     uint8_t data[161];
+
+    bool monoMode;
+
+    // Extra buffering for when GetSamples wants a buffer not a multiple of N
+    int16_t extra_buf[N];
+    unsigned int extra_buf_size;
 
     // SysexComm sysexComm;
     VoiceStatus voiceStatus;
@@ -130,27 +112,6 @@ public :
     bool showKeyboard;
     int getEngineType();
     void setEngineType(int rs);
-    
-    OperatorCtrl opCtrl[6];
-    CtrlDX pitchEgRate[4];
-    CtrlDX pitchEgLevel[4];
-    CtrlDX pitchModSens;
-    CtrlDX algo;
-    CtrlDX oscSync;
-    CtrlDX feedback;
-    CtrlDX lfoRate;
-    CtrlDX lfoDelay;
-    CtrlDX lfoAmpDepth;
-    CtrlDX lfoPitchDepth;
-    CtrlDX lfoWaveform;
-    CtrlDX lfoSync;
-    CtrlDX transpose;
-
-    CtrlFloat fxCutoff;
-    CtrlFloat fxReso;
-    CtrlFloat output;
-    //CtrlFloat tune;
-
     void setDxValue(int offset, int v);
 
     //==============================================================================
@@ -162,59 +123,31 @@ public :
     void releaseResources();
     //void processBlock (AudioSampleBuffer& buffer, MidiBuffer& midiMessages);
     void panic();
-    bool isMonoMode() {
-        return monoMode;
-    }
-    void setMonoMode(bool mode);
     
-    void copyToClipboard(int srcOp);
-    void pasteOpFromClipboard(int destOp);
-    void pasteEnvFromClipboard(int destOp);
-    void sendCurrentSysexProgram();
-    void sendCurrentSysexCartridge();
-    bool hasClipboardContent();
-    
-    //==============================================================================
-    //AudioProcessorEditor* createEditor();
-    bool hasEditor() const;
-    void updateUI();
     bool peekVoiceStatus();
     void updateProgramFromSysex(const uint8_t *rawdata);
     void setupStartupCart();
-    
-    //==============================================================================
-    const String getName() const;
-    int getNumParameters();
-    float getParameter (int index);
-    void setParameter (int index, float newValue);
-    const String getParameterName (int index);
-    const String getParameterText (int index);
 
-    const String getInputChannelName (int channelIndex) const;
-    const String getOutputChannelName (int channelIndex) const;
-    bool isInputChannelStereoPair (int index) const;
-    bool isOutputChannelStereoPair (int index) const;
+    //================ Braids
+    inline void set_pitch(int16_t pitch) {
+        pitch_ = pitch;
+    }
 
-    bool acceptsMidi() const;
-    bool producesMidi() const;
-    bool silenceInProducesSilenceOut() const;
-    double getTailLengthSeconds() const;
+    inline int16_t pitch() const { return pitch_; }
 
-    //==============================================================================
-    int getNumPrograms();
-    int getCurrentProgram();
-    void setCurrentProgram(int index);
-    const String getProgramName (int index);
-    void changeProgramName(int index, const String& newName);
-    void resetToInitVoice();
-    
-    // this is kept up to date with the midi messages that arrive, and the UI component
-    // registers with it so it can represent the incoming messages
-    void unbindUI();
-
-    void loadPreference();
-    void savePreference();
-    
+    inline void set_parameters(
+          int16_t parameter_1,
+          int16_t parameter_2) {
+      parameter_[0] = parameter_1;
+      parameter_[1] = parameter_2;
+    }
+  
+  inline void Strike() {
+    noteStart_ = true;
+  }
+  
+  void Render(const uint8_t* sync_buffer, int16_t* buffer, size_t size);
+  
 private:
     //==============================================================================
     // JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DexedAudioProcessor)

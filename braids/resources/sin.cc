@@ -17,8 +17,8 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#include "synth.h"
-#include "sin.h"
+//#include "../synth.h"
+#include "../sin.h"
 
 #define R (1 << 29)
 
