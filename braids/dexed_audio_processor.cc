@@ -132,7 +132,7 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
     }
 
     if (noteStart_) {
-        keydown(78,128);
+        keydown(98,128);
         noteStart_ = false;
     }
 

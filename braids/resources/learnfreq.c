@@ -38,6 +38,6 @@ int osc_freq(int midinote, int mode, int coarse, int fine, int detune) {
 
 int main(int argc, char **argv) {
 	for (int i = 0; i < 127; i++) {
-		printf("note %d, freq %d\n", i, osc_freq(i, 0, 0, 0, 0));
+		printf("%d, %d, %d\n", i, midinote_to_logfreq(i), osc_freq(i, 0, 0, 0, 0));
 	}
 }

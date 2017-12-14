@@ -18,7 +18,7 @@
 #include <math.h>
 
 // #include "../synth.h"
-#include "../exp2.h"
+#include "exp2.h"
 
 #include <stdio.h>
 

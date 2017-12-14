@@ -48,7 +48,7 @@ void dumptable32(int32_t *table, int c) {
 
 void dumptableu16(uint16_t *table, int c) {
     for (int i = 0; i < c; i++) {
-        printf("%hu", exp2tab[i]);
+        printf("%hu", table[i]);
         if (i < c-1) {
             printf(",");
         }
