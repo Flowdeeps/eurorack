@@ -67,6 +67,16 @@ DexedAudioProcessor::~DexedAudioProcessor() {
     TRACE("Bye");
 }
 
+const char init_voice[] =
+      { 99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 7,
+        99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 7,
+        99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 7,
+        99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 7,
+        99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 7,
+        99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 99, 0, 1, 0, 7,
+        99, 99, 99, 99, 50, 50, 50, 50, 0, 0, 1, 35, 0, 0, 0, 1, 0, 3, 24,
+        73, 78, 73, 84, 32, 86, 79, 73, 67, 69 };
+
 //==============================================================================
 void DexedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
     //Freqlut::init(sampleRate);
@@ -79,6 +89,10 @@ void DexedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) 
         voices[note].keydown = false;
         voices[note].sustained = false;
         voices[note].live = false;
+    }
+
+    for(unsigned int i=0;i<sizeof(init_voice);i++) {
+        data[i] = init_voice[i];
     }
 
     currentNote = 0;
@@ -118,7 +132,7 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
     }
 
     if (noteStart_) {
-        keydown(64,128);
+        keydown(78,128);
         noteStart_ = false;
     }
 
@@ -176,9 +190,9 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
             int jmax = numSamples - i;
             for (int j = 0; j < N; ++j) {
                 if (j < jmax) {
-                    channelData[i + j] = audiobuf[j];
+                    channelData[i + j] = audiobuf[j] >> 16;
                 } else {
-                    extra_buf[j - jmax] = audiobuf[j];
+                    extra_buf[j - jmax] = audiobuf[j] >> 16;
                 }
             }
         }
