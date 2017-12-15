@@ -250,8 +250,8 @@ void RenderBlock() {
   previous_pitch = pitch;
   
   pitch += jitter_source.Render(settings.vco_drift());
-  pitch += internal_adc.value() >> 8;
-  pitch += ad_value * settings.GetValue(SETTING_AD_FM) >> 7;
+ // pitch += internal_adc.value() >> 8;
+ // pitch += ad_value * settings.GetValue(SETTING_AD_FM) >> 7;
   
   if (pitch > 16383) {
     pitch = 16383;
@@ -259,10 +259,10 @@ void RenderBlock() {
     pitch = 0;
   }
   
-  if (settings.vco_flatten()) {
-    pitch = Interpolate88(lut_vco_detune, pitch << 2);
-  }
-  osc.set_pitch(pitch + settings.pitch_transposition());
+  //if (settings.vco_flatten()) {
+  //  pitch = Interpolate88(lut_vco_detune, pitch << 2);
+  //}
+  osc.set_pitch(pitch /* settings.pitch_transposition() */);
 
   if (trigger_flag) {
     osc.Strike();

@@ -35,12 +35,15 @@ void TestAudioRendering() {
   wav_writer.Open("oscillator.wav");
 
   osc.prepareToPlay(96000, kAudioBlockSize);
+  int n = 3;
 
   for (uint32_t i = 0; i < kSampleRate * 5 / kAudioBlockSize; ++i) {
     if ((i % 2000) == 1900) {
       osc.set_gatestate(false);
     }
     if ((i % 2000) == 0) {
+      osc.set_pitch((n << 7));
+      n+=12;
       osc.Strike();
       osc.set_gatestate(true);
     }
@@ -54,7 +57,6 @@ void TestAudioRendering() {
     osc.set_parameters(10000, 10000);
     memset(sync_buffer, 0, sizeof(sync_buffer));
     //sync_buffer[0] = (i % 32) == 0 ? 1 : 0;
-    osc.set_pitch((48 << 7));
     osc.Render(sync_buffer, buffer, kAudioBlockSize);
     wav_writer.WriteFrames(buffer, kAudioBlockSize);
   }

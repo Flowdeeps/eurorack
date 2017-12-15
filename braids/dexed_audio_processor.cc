@@ -142,7 +142,7 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
     }
 
     if (!gatestate_ && voices[0].keydown) {
-      //  keyup();
+        keyup();
     } else if (noteStart_) {
         // int16_t ranges from -32768 to 32767
         // midi ranges from 0 to 127
@@ -182,9 +182,9 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
             int jmax = numSamples - i;
             for (int j = 0; j < N; ++j) {
                 if (j < jmax) {
-                    channelData[i + j] = audiobuf[j] >> 13;
+                    channelData[i + j] = audiobuf[j] >> 12;
                 } else {
-                    extra_buf[j - jmax] = audiobuf[j] >> 13;
+                    extra_buf[j - jmax] = audiobuf[j] >> 12;
                 }
             }
         }
@@ -270,6 +270,8 @@ void DexedAudioProcessor::keydown() {
             voices[note].sustained = sustain;
             voices[note].keydown = true;
             voices[note].dx7_note.init(data, pitch_, velo);
+//            voices[note].dx7_note.init(data, (48 << 7), velo);
+
             if ( data[136] )
                 voices[note].dx7_note.oscSync();
             break;
