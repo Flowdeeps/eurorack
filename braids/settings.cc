@@ -144,7 +144,7 @@ const char* const zero_to_fifteen_values[] = {
     "  15"};
 
 const char* const algo_values[] = {
-    "CSAW",
+    "DX7 ",
     "^\x88\x8D_",
     "\x88\x8A\x8C\x8D",
     "FOLD",

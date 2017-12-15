@@ -35,7 +35,6 @@
 #include "EngineMkI.h"
 
 struct ProcessorVoice {
-    int midi_note;
     int velocity;
     bool keydown;
     bool sustained;
@@ -74,8 +73,8 @@ class DexedAudioProcessor
     bool refreshVoice;
     bool normalizeDxVelocity;
     
-    void keydown(uint8_t pitch, uint8_t velo);
-    void keyup(uint8_t pitch);
+    void keydown();
+    void keyup();
     
     void initCtrl();
 
@@ -92,7 +91,7 @@ class DexedAudioProcessor
     int16_t parameter_[2];
     int16_t pitch_;
 
-    bool noteStart_;
+    bool noteStart_, gatestate_;
     
 public :
     // in MIDI units (0x4000 is neutral)
@@ -144,6 +143,10 @@ public :
   
   inline void Strike() {
     noteStart_ = true;
+  }
+
+  inline void set_gatestate(bool gatestate) {
+    gatestate_ = gatestate;
   }
   
   void Render(const uint8_t* sync_buffer, int16_t* buffer, size_t size);

@@ -138,7 +138,8 @@ Dx7Note::Dx7Note() {
     }
 }
 
-void Dx7Note::init(const uint8_t *patch, int midinote, int velocity) {
+void Dx7Note::init(const uint8_t *patch, int16_t braids_pitch, int velocity) {
+    int midinote = braids_pitch >> 7;
     int rates[4];
     int levels[4];
     for (int op = 0; op < 6; op++) {
@@ -159,12 +160,10 @@ void Dx7Note::init(const uint8_t *patch, int midinote, int velocity) {
         int rate_scaling = ScaleRate(midinote, patch[off + 13]);
         env_[op].init(rates, levels, outlevel, rate_scaling);
         
-        // int mode = patch[off + 17];
-        // int coarse = patch[off + 18];
-        // int fine = patch[off + 19];
-        // int detune = patch[off + 20];
-        int32_t freq = 123470783; //osc_freq(midinote, mode, coarse, fine, detune);
-        basepitch_[op] = freq;
+        // braids pitch is 128 per semi
+        // dexed is 1398101 per semi
+        // so factor is (1398101 / 128) = 10922.6640625
+        basepitch_[op] = 50857777 + (braids_pitch * 10922.6);
         ampmodsens_[op] = ampmodsenstab[patch[off + 14] & 3];
     }
     for (int i = 0; i < 4; i++) {
@@ -247,16 +246,18 @@ void Dx7Note::keyup() {
     pitchenv_.keydown(false);
 }
 
-void Dx7Note::update(const uint8_t *patch, int midinote, int velocity) {
+void Dx7Note::update(const uint8_t *patch, int16_t braids_pitch, int velocity) {
     int rates[4];
     int levels[4];
+    int midinote = braids_pitch >> 7;
+
     for (int op = 0; op < 6; op++) {
         int off = op * 21;
-        // int mode = patch[off + 17];
-        // int coarse = patch[off + 18];
-        // int fine = patch[off + 19];
-        // int detune = patch[off + 20];
-        basepitch_[op] = 123470783; //osc_freq(midinote, mode, coarse, fine, detune);
+        
+        // braids pitch is 128 per semi
+        // dexed is 1398101 per semi
+        // so factor is (1398101 / 128) = 10922.6640625
+        basepitch_[op] = 50857777 + (braids_pitch * 10922.6);
         ampmodsens_[op] = ampmodsenstab[patch[off + 14] & 3];
         
         for (int i = 0; i < 4; i++) {

@@ -57,25 +57,31 @@ DexedAudioProcessor::DexedAudioProcessor() {
     controllers.values_[kControllerPitchRange] = 3;
     controllers.values_[kControllerPitchStep] = 0;
     controllers.masterTune = 0;
-
-    //nextMidi = NULL;
-    //midiMsg = NULL;
-
 }
 
 DexedAudioProcessor::~DexedAudioProcessor() {
     TRACE("Bye");
 }
 
-const char init_voice[] =
-      { 99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 7,
-        99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 7,
-        99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 7,
-        99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 7,
-        99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 7,
-        99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 99, 0, 1, 0, 7,
-        99, 99, 99, 99, 50, 50, 50, 50, 0, 0, 1, 35, 0, 0, 0, 1, 0, 3, 24,
-        73, 78, 73, 84, 32, 86, 79, 73, 67, 69 };
+// const char init_voice[] =
+//       { 99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 99, 0, 1, 0, 7,
+//         99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 99, 0, 1, 0, 7,
+//         99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 99, 0, 1, 0, 7,
+//         99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 99, 0, 1, 0, 7,
+//         99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 99, 0, 1, 0, 7,
+//         99, 99, 99, 99, 99, 99, 99, 00, 39, 0, 0, 0, 0, 0, 0, 0, 99, 0, 1, 0, 7,
+//         99, 99, 99, 99, 50, 50, 50, 50, 0, 0, 1, 35, 0, 0, 0, 1, 0, 3, 24,
+//         73, 78, 73, 84, 32, 86, 79, 73, 67, 69 };
+
+const char init_voice[] =  {
+99, 32, 98, 62, 99, 67, 52, 0, 7, 0, 0, 0, 0, 0, 3, 7, 41, 0, 6, 27, 7, 
+65, 86, 98, 62, 98, 0, 98, 0, 0, 0, 0, 0, 0, 0, 1, 0, 61, 0, 5, 0, 14, 
+38, 17, 99, 61, 89, 10, 43, 0, 0, 0, 0, 0, 0, 0, 1, 0, 72, 0, 0, 1, 7, 
+54, 56, 28, 64, 92, 99, 99, 0, 36, 0, 0, 0, 0, 0, 3, 0, 99, 0, 1, 0, 7, 
+51, 17, 99, 61, 89, 10, 43, 0, 0, 0, 0, 0, 0, 0, 1, 0, 99, 0, 1, 0, 7, 
+54, 56, 28, 64, 92, 87, 0, 0, 36, 0, 0, 0, 0, 0, 3, 0, 99, 0, 0, 0, 0, 
+94, 67, 95, 60, 50, 50, 50, 50, 0, 7, 0, 42, 57, 6, 60, 0, 4, 2, 36, 72, 82, 
+77, 78, 67, 65, 50, 32, 66, 67, 1, 1, 1, 1, 1, 1};
 
 //==============================================================================
 void DexedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
@@ -125,14 +131,19 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
     if ( refreshVoice ) {
         for(i=0;i < MAX_ACTIVE_NOTES;i++) {
             if ( voices[i].live )
-                voices[i].dx7_note.update(data, voices[i].midi_note, voices[i].velocity);
+                voices[i].dx7_note.update(data, pitch_, voices[i].velocity);
         }
         lfo.reset(data + 137);
         refreshVoice = false;
     }
 
-    if (noteStart_) {
-        keydown(98,128);
+    if (!gatestate_ && voices[0].keydown) {
+        keyup();
+    } else if (noteStart_) {
+        // int16_t ranges from -32768 to 32767
+        // midi ranges from 0 to 127
+        // parameter + 32768 >> 
+        keydown();
         noteStart_ = false;
     }
 
@@ -190,9 +201,9 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
             int jmax = numSamples - i;
             for (int j = 0; j < N; ++j) {
                 if (j < jmax) {
-                    channelData[i + j] = audiobuf[j] >> 16;
+                    channelData[i + j] = audiobuf[j] >> 13;
                 } else {
-                    extra_buf[j - jmax] = audiobuf[j] >> 16;
+                    extra_buf[j - jmax] = audiobuf[j] >> 13;
                 }
             }
         }
@@ -263,14 +274,8 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
 //     }
 // }
 
-void DexedAudioProcessor::keydown(uint8_t pitch, uint8_t velo) {
-    if ( velo == 0 ) {
-        keyup(pitch);
-        return;
-    }
-
-    pitch += data[144] - 24;
-    
+void DexedAudioProcessor::keydown() {
+    uint8_t velo = 127; //(parameter_[0] + 32768) >> 9;
     if ( normalizeDxVelocity ) {
         velo = ((float)velo) * 0.7874015; // 100/127
     }
@@ -280,46 +285,24 @@ void DexedAudioProcessor::keydown(uint8_t pitch, uint8_t velo) {
         if (!voices[note].keydown) {
             currentNote = (note + 1) % MAX_ACTIVE_NOTES;
             lfo.keydown();  // TODO: should only do this if # keys down was 0
-            voices[note].midi_note = pitch;
             voices[note].velocity = velo;
             voices[note].sustained = sustain;
             voices[note].keydown = true;
-            voices[note].dx7_note.init(data, pitch, velo);
+            voices[note].dx7_note.init(data, pitch_, velo);
             if ( data[136] )
                 voices[note].dx7_note.oscSync();
             break;
         }
         note = (note + 1) % MAX_ACTIVE_NOTES;
     }
-    
-    if ( monoMode ) {
-        for(int i=0; i<MAX_ACTIVE_NOTES; i++) {            
-            if ( voices[i].live ) {
-                // all keys are up, only transfert signal
-                if ( ! voices[i].keydown ) {
-                    voices[i].live = false;
-                    voices[note].dx7_note.transferSignal(voices[i].dx7_note);
-                    break;
-                }
-                if ( voices[i].midi_note < pitch ) {
-                    voices[i].live = false;
-                    voices[note].dx7_note.transferState(voices[i].dx7_note);
-                    break;
-                }
-                return;
-            }
-        }
-    }
  
     voices[note].live = true;
 }
 
-void DexedAudioProcessor::keyup(uint8_t pitch) {
-    pitch += data[144] - 24;
-
+void DexedAudioProcessor::keyup() {
     int note;
     for (note=0; note<MAX_ACTIVE_NOTES; ++note) {
-        if ( voices[note].midi_note == pitch && voices[note].keydown ) {
+        if (voices[note].keydown ) {
             voices[note].keydown = false;
             break;
         }
@@ -329,23 +312,6 @@ void DexedAudioProcessor::keyup(uint8_t pitch) {
     if ( note >= MAX_ACTIVE_NOTES ) {
         TRACE("note-off not found???");
         return;
-    }
-    
-    if ( monoMode ) {
-        int highNote = -1;
-        int target = 0;
-        for (int i=0; i<MAX_ACTIVE_NOTES;i++) {
-            if ( voices[i].keydown && voices[i].midi_note > highNote ) {
-                target = i;
-                highNote = voices[i].midi_note;
-            }
-        }
-        
-        if ( highNote != -1 ) {
-            voices[note].live = false;
-            voices[target].live = true;
-            voices[target].dx7_note.transferState(voices[note].dx7_note);
-        }
     }
     
     if ( sustain ) {

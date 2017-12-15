@@ -78,6 +78,8 @@ int16_t audio_samples[kNumBlocks][kBlockSize];
 uint8_t sync_samples[kNumBlocks][kBlockSize];
 
 bool trigger_detected_flag;
+bool gate_state;
+bool last_gate_state;
 volatile bool trigger_flag;
 uint16_t trigger_delay;
 
@@ -109,6 +111,7 @@ void TIM1_UP_IRQHandler(void) {
   dac.Write(-audio_samples[playback_block][current_sample] + 32768);
 
   bool trigger_detected = gate_input.raised();
+  gate_state = trigger_detected;
   sync_samples[playback_block][current_sample] = trigger_detected;
   trigger_detected_flag = trigger_detected_flag | trigger_detected;
   
@@ -166,6 +169,8 @@ void Init() {
 
   ws.Init(GetUniqueId(1));
   jitter_source.Init();
+  gate_state = false;
+  last_gate_state = false;
   sys.StartTimers();
 }
 
@@ -264,6 +269,11 @@ void RenderBlock() {
     envelope.Trigger(ENV_SEGMENT_ATTACK);
     ui.StepMarquee();
     trigger_flag = false;
+  }
+
+  if (gate_state != last_gate_state) {
+    last_gate_state = gate_state;
+    osc.set_gatestate(gate_state);
   }
   
   uint8_t* sync_buffer = sync_samples[render_block];
