@@ -68,6 +68,10 @@ class MacroOscillator {
     pitch_ = pitch;
   }
 
+  inline void set_gatestate(bool gate) {
+  }
+
+
   inline int16_t pitch() const { return pitch_; }
 
   inline void set_parameters(
@@ -81,6 +85,9 @@ class MacroOscillator {
     digital_oscillator_.Strike();
   }
   
+  void prepareToPlay (double sampleRate, int samplesPerBlock) {
+    
+  }
   void Render(const uint8_t* sync_buffer, int16_t* buffer, size_t size);
   
  private:

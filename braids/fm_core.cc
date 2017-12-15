@@ -109,6 +109,7 @@ void FmCore::render(int32_t *output, FmOpParams *params, int algorithm, int32_t 
             if (!has_contents[outbus]) {
                 add = false;
             }
+            
             if (inbus == 0 || !has_contents[inbus]) {
                 // todo: more than one op in a feedback loop
                 if ((flags & 0xc0) == 0xc0 && feedback_shift < 16) {
@@ -126,6 +127,7 @@ void FmCore::render(int32_t *output, FmOpParams *params, int algorithm, int32_t 
                 FmOpKernel::compute(outptr, buf_[inbus - 1].get(),
                                     param.phase, param.freq, gain1, gain2, add);
             }
+            
             has_contents[outbus] = true;
         } else if (!add) {
             has_contents[outbus] = false;

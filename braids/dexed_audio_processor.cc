@@ -34,6 +34,8 @@
 #include "aligned_buf.h"
 #include "fm_op_kernel.h"
 
+EngineMkI engineMkI;
+
 //==============================================================================
 DexedAudioProcessor::DexedAudioProcessor() {
 #ifdef DEBUG
@@ -82,6 +84,8 @@ const char init_voice[] =  {
 54, 56, 28, 64, 92, 87, 0, 0, 36, 0, 0, 0, 0, 0, 3, 0, 99, 0, 0, 0, 0, 
 94, 67, 95, 60, 50, 50, 50, 50, 0, 7, 0, 42, 57, 6, 60, 0, 4, 2, 36, 72, 82, 
 77, 78, 67, 65, 50, 32, 66, 67, 1, 1, 1, 1, 1, 1};
+
+int32_t audiobuf[N];
 
 //==============================================================================
 void DexedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
@@ -138,7 +142,7 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
     }
 
     if (!gatestate_ && voices[0].keydown) {
-        keyup();
+      //  keyup();
     } else if (noteStart_) {
         // int16_t ranges from -32768 to 32767
         // midi ranges from 0 to 127
@@ -162,12 +166,9 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
         extra_buf_size -= numSamples;
     } else {
         for (; i < numSamples; i += N) {
-            int32_t audiobuf[N];
-            //float sumbuf[N];
             
             for (int j = 0; j < N; ++j) {
                 audiobuf[j] = 0;
-                //sumbuf[j] = 0;
             }
             int32_t lfovalue = lfo.getsample();
             int32_t lfodelay = lfo.getdelay();
@@ -175,29 +176,9 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
             for (int note = 0; note < MAX_ACTIVE_NOTES; ++note) {
                 if (voices[note].live) {
                     voices[note].dx7_note.compute(&audiobuf[0], lfovalue, lfodelay, &controllers);
-                    
-                    // for (int j=0; j < N; ++j) {
-                    //     int32_t val = audiobuf[j];
-                        
-                    //     val = val >> 4;
-                    //     int clip_val = val < -(1 << 24) ? 0x8000 : val >= (1 << 24) ? 0x7fff : val >> 9;
-                    //     float f = ((float) clip_val) / (float) 0x8000;
-                    //     if( f > 1 ) f = 1;
-                    //     if( f < -1 ) f = -1;
-                    //     sumbuf[j] += f;
-                    //     audiobuf[j] = 0;
-                    // }
                 }
             }
             
-            // int jmax = numSamples - i;
-            // for (int j = 0; j < N; ++j) {
-            //     if (j < jmax) {
-            //         channelData[i + j] = sumbuf[j];
-            //     } else {
-            //         extra_buf[j - jmax] = sumbuf[j];
-            //     }
-            // }
             int jmax = numSamples - i;
             for (int j = 0; j < N; ++j) {
                 if (j < jmax) {

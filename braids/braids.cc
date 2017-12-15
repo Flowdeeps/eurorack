@@ -111,7 +111,7 @@ void TIM1_UP_IRQHandler(void) {
   dac.Write(-audio_samples[playback_block][current_sample] + 32768);
 
   bool trigger_detected = gate_input.raised();
-  gate_state = trigger_detected;
+  gate_state = gate_input.state();
   sync_samples[playback_block][current_sample] = trigger_detected;
   trigger_detected_flag = trigger_detected_flag | trigger_detected;
   

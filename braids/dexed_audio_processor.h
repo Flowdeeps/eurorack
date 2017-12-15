@@ -47,6 +47,8 @@ enum DexedEngineResolution {
     DEXED_ENGINE_MARKI
 };
 
+extern EngineMkI engineMkI;
+
 //==============================================================================
 /**
 */
@@ -78,11 +80,8 @@ class DexedAudioProcessor
     
     void initCtrl();
 
-	
     uint32_t engineType;
-    
-    EngineMkI engineMkI;
-    
+        
     void resolvAppDir();
     
     void unpackOpSwitch(char packOpValue);
