@@ -83,7 +83,7 @@ public:
     int amp_mod;
     int pitch_mod;
     int eg_mod;
-    
+
     int aftertouch_cc;
     int breath_cc;
     int foot_cc;

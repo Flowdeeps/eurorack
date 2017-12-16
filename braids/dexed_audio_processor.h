@@ -39,6 +39,7 @@ struct ProcessorVoice {
     bool keydown;
     bool sustained;
     bool live;
+    int16_t braids_pitch;
     Dx7Note dx7_note;
 };
 

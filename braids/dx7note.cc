@@ -24,9 +24,9 @@
 #include "dx7note.h"
 
 const int FEEDBACK_BITDEPTH = 8;
-#include "EngineMkI.h"
+#include "fm_core.h"
 
-extern EngineMkI engineMkI;
+extern FmCore fmCore;
 
 int32_t midinote_to_logfreq(int midinote) {
     const int base = 50857777;  // (1 << 24) * (log(440) / log(2) - 69/12)
@@ -239,7 +239,7 @@ void Dx7Note::compute(int32_t *buf, int32_t lfo_val, int32_t lfo_delay, const Co
             params_[op].level_in = level;
         }
     }
-    engineMkI.render(buf, params_, algorithm_, fb_buf_, fb_shift_);
+    fmCore.render(buf, params_, algorithm_, fb_buf_, fb_shift_);
 }
 
 void Dx7Note::keyup() {
@@ -247,6 +247,12 @@ void Dx7Note::keyup() {
         env_[op].keydown(false);
     }
     pitchenv_.keydown(false);
+}
+
+void Dx7Note::updatePitch(int16_t braids_pitch) {
+    for (int op = 0; op < 6; op++) {
+        basepitch_[op] = 50857777 + (braids_pitch * 10922.6);
+    }
 }
 
 void Dx7Note::update(const uint8_t *patch, int16_t braids_pitch, int velocity) {
