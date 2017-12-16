@@ -293,6 +293,7 @@ void Dx7Note::update(const uint8_t *patch, int16_t braids_pitch, int velocity) {
     ampmoddepth_ = (patch[140] * 165) >> 6;
 }
 
+
 void Dx7Note::peekVoiceStatus(VoiceStatus &status) {
     for(int i=0;i<6;i++) {
         status.amp[i] = Exp2::lookup(params_[i].level_in - (14 * (1 << 24)));
