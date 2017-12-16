@@ -46,7 +46,7 @@
 
 #include "braids/quantizer_scales.h"
 
-#include "dexed_audio_processor.h"
+#include "dexed/dexed_audio_processor.h"
 // #define PROFILE_RENDER 1
 
 using namespace braids;
