@@ -22,24 +22,46 @@
 
 #define R (1 << 29)
 
- 
-
 #ifndef SIN_INLINE
+
+const int SHIFT = 24 - SIN_LG_N_SAMPLES; // 14
+int sin_lowbits;
+int sin_phase_int;
+int sin_dy, sin_y0;
+
 int32_t Sin::lookup(int32_t phase) {
-  const int SHIFT = 24 - SIN_LG_N_SAMPLES;
-  int lowbits = phase & ((1 << SHIFT) - 1);
+  return Sin::compute(phase);
+
+  // #define SIN_LG_N_SAMPLES 10
+  // #define SIN_N_SAMPLES (1 << SIN_LG_N_SAMPLES) == 0x
+  // table size is SIN_N_SAMPLES << 1 == 2048
+  sin_lowbits = phase & ((1 << SHIFT) - 1); // & 0x1fff
+  // phase & ((1 << 10) - 1)
+  // phase & ((1024) - 1) == phase & 1023 == phase & 0x3FF
+
 #ifdef SIN_DELTA
-  int phase_int = (phase >> (SHIFT - 1)) & ((SIN_N_SAMPLES - 1) << 1);
-  int dy = sintab[phase_int];
-  int y0 = sintab[phase_int + 1];
+  sin_phase_int = (phase >> (SHIFT - 1)) & ((SIN_N_SAMPLES - 1) << 1); 
+  // phase >> 13 & ((1023) << 1)
+  // phase >> 13 & 0x7FE
 
-  return y0 + (((int64_t)dy * (int64_t)lowbits) >> SHIFT);
+  // if (sin_phase_int < 0) { sin_phase_int = 0; }
+  // if (sin_phase_int > 2047) { sin_phase_int = 2047; }
+  sin_dy = sintab[sin_phase_int];
+  //int dy = sintab[2046];
+
+  //if (sin_phase_int + 1 > 2047) { sin_phase_int -= 2048; }
+  sin_phase_int += 1;
+  sin_y0 = sintab[sin_phase_int];
+
+  return sin_y0 + (((int64_t)sin_dy * (int64_t)sin_lowbits) >> SHIFT);
+  //return y0 + (((int32_t) ((float) dy * (float) lowbits)) >> SHIFT);
+
 #else 
-  int phase_int = (phase >> SHIFT) & (SIN_N_SAMPLES - 1);
-  int y0 = sintab[phase_int];
-  int y1 = sintab[phase_int + 1];
+  int sin_phase_int = (phase >> SHIFT) & (SIN_N_SAMPLES - 1);
+  int y0 = sintab[sin_phase_int];
+  int y1 = sintab[sin_phase_int + 1];
 
-  return y0 + (((int64_t)(y1 - y0) * (int64_t)lowbits) >> SHIFT);
+  return y0 + (((int64_t)(y1 - y0) * (int64_t)sin_lowbits) >> SHIFT);
 #endif
 }
 #endif

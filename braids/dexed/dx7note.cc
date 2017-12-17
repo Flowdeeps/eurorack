@@ -184,18 +184,16 @@ void Dx7Note::init(const uint8_t *patch, int16_t braids_pitch, int velocity) {
 
 void Dx7Note::compute(int32_t *buf, int32_t lfo_val, int32_t lfo_delay, const Controllers *ctrls) {
     // ==== PITCH ====
-    uint32_t pmd = pitchmoddepth_ * lfo_delay;  // Q32
     int32_t senslfo = pitchmodsens_ * (lfo_val - (1 << 23));
-    int32_t pmod_1 = (((int64_t) pmd) * (int64_t) senslfo) >> 39;
+    int32_t pmod_1 = (((int64_t) (pitchmoddepth_ * lfo_delay)) * (int64_t) senslfo) >> 39;
     pmod_1 = abs(pmod_1);
     int32_t pmod_2 = ((int64_t)ctrls->pitch_mod * (int64_t)senslfo) >> 14;
     pmod_2 = abs(pmod_2);
-    int32_t pitch_mod = max(pmod_1, pmod_2);
-    pitch_mod = pitchenv_.getsample() + (pitch_mod * (senslfo < 0 ? -1 : 1));
+    pmod_1 = max(pmod_1, pmod_2);
+    pmod_1 = pitchenv_.getsample() + (pmod_1 * (senslfo < 0 ? -1 : 1));
     
     // ---- PITCH BEND ----
-    int pitchbend = ctrls->values_[kControllerPitch];
-    int32_t pb = (pitchbend - 0x2000);
+    int32_t pb = (ctrls->values_[kControllerPitch] - 0x2000);
     if (pb != 0) {
         if (ctrls->values_[kControllerPitchStep] == 0) {
             pb = ((float) (pb << 11)) * ((float) ctrls->values_[kControllerPitchRange]) / 12.0;
@@ -205,18 +203,18 @@ void Dx7Note::compute(int32_t *buf, int32_t lfo_val, int32_t lfo_delay, const Co
             pb = (pb * (8191 / stp)) << 11;
         }
     }
-    pitch_mod += pb;
-    pitch_mod += ctrls->masterTune;
+    pmod_1 += pb;
+    pmod_1 += ctrls->masterTune;
     
     // ==== AMP MOD ====
     uint32_t amod_1 = ((int64_t) ampmoddepth_ * (int64_t) lfo_delay) >> 8; // Q24 :D
     amod_1 = ((int64_t) amod_1 * (int64_t) lfo_val) >> 24;
     uint32_t amod_2 = ((int64_t) ctrls->amp_mod * (int64_t) lfo_val) >> 7; // Q?? :|
-    uint32_t amd_mod = max(amod_1, amod_2);
+    amod_1 = max(amod_1, amod_2);
     
     // ==== EG AMP MOD ====
     uint32_t amod_3 = (ctrls->eg_mod+1) << 17;
-    amd_mod = max((1<<24) - amod_3, amd_mod);
+    amod_1 = max((1<<24) - amod_3, amod_1);
 
     // ==== OP RENDER ====
     for (int op = 0; op < 6; op++) {
@@ -225,7 +223,7 @@ void Dx7Note::compute(int32_t *buf, int32_t lfo_val, int32_t lfo_delay, const Co
             params_[op].level_in = 0;
         } else {
             //int32_t gain = pow(2, 10 + level * (1.0 / (1 << 24)));
-            params_[op].freq = Freqlut::lookup(basepitch_[op] + pitch_mod);
+            params_[op].freq = Freqlut::lookup(basepitch_[op] + pmod_1);
             
             int32_t level = env_[op].getsample();
             if (ampmodsens_[op] != 0) {
@@ -255,9 +253,11 @@ void Dx7Note::updatePitch(int16_t braids_pitch) {
     }
 }
 
+int updaterates[4];
+int updatelevels[4];
+
 void Dx7Note::update(const uint8_t *patch, int16_t braids_pitch, int velocity) {
-    int rates[4];
-    int levels[4];
+
     int midinote = braids_pitch >> 7;
 
     for (int op = 0; op < 6; op++) {
@@ -270,8 +270,8 @@ void Dx7Note::update(const uint8_t *patch, int16_t braids_pitch, int velocity) {
         ampmodsens_[op] = ampmodsenstab[patch[off + 14] & 3];
         
         for (int i = 0; i < 4; i++) {
-            rates[i] = patch[off + i];
-            levels[i] = patch[off + 4 + i];
+            updaterates[i] = patch[off + i];
+            updatelevels[i] = patch[off + 4 + i];
         }
         int outlevel = patch[off + 16];
         outlevel = Env::scaleoutlevel(outlevel);
@@ -283,7 +283,7 @@ void Dx7Note::update(const uint8_t *patch, int16_t braids_pitch, int velocity) {
         outlevel += ScaleVelocity(velocity, patch[off + 15]);
         outlevel = max(0, outlevel);
         int rate_scaling = ScaleRate(midinote, patch[off + 13]);
-        env_[op].update(rates, levels, outlevel, rate_scaling);
+        env_[op].update(updaterates, updatelevels, outlevel, rate_scaling);
     }
     algorithm_ = patch[134];
     int feedback = patch[135];

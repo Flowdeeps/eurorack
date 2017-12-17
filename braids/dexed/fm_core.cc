@@ -90,12 +90,18 @@ void FmCore::dump() {
 #endif
 }
 
+#define kLevelThresh 1120
+FmAlgorithm alg;
+bool has_contents[3];
+int flags;
+
 void FmCore::render(int32_t *output, FmOpParams *params, int algorithm, int32_t *fb_buf, int32_t feedback_shift) {
-    const int kLevelThresh = 1120;
-    const FmAlgorithm alg = algorithms[algorithm];
-    bool has_contents[3] = { true, false, false };
+    alg = algorithms[algorithm];
+    has_contents[0] = true;
+    has_contents[1] = false;
+    has_contents[2] = false;
     for (int op = 0; op < 6; op++) {
-        int flags = alg.ops[op];
+        flags = alg.ops[op];
         bool add = (flags & OUT_BUS_ADD) != 0;
         FmOpParams &param = params[op];
         int inbus = (flags >> 4) & 3;

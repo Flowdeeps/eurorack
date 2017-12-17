@@ -242,7 +242,7 @@ const int32_t sintab[] = {
 102803,-926022,102835,-823219,102862,-720384,102885,-617522,102904,-514637,
 102920,-411733,102931,-308813,102939,-205882,102943,-102943};
 #else
-extern int32_t sintab[SIN_N_SAMPLES + 1];
+// extern int32_t sintab[SIN_N_SAMPLES + 1];
 #endif
 
 #ifdef SIN_INLINE
@@ -255,7 +255,8 @@ int32_t Sin::lookup(int32_t phase) {
   int dy = sintab[phase_int];
   int y0 = sintab[phase_int + 1];
 
-  return y0 + (((int64_t)dy * (int64_t)lowbits) >> SHIFT);
+  //return y0 + (((int64_t)dy * (int64_t)lowbits) >> SHIFT);
+  return y0 + ((int32_t) ((float)dy * (float)lowbits) >> SHIFT);
 #else
   int phase_int = (phase >> SHIFT) & (SIN_N_SAMPLES - 1);
   int y0 = sintab[phase_int];

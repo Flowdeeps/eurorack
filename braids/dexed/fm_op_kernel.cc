@@ -50,13 +50,8 @@ void FmOpKernel::compute(int32_t *output, const int32_t *input,
   int32_t dgain = (gain2 - gain1 + (N >> 1)) >> LG_N;
   int32_t gain = gain1;
   int32_t phase = phase0;
-  if (hasNeon()) {
-#ifdef HAVE_NEON
-    neon_fm_kernel(input, add ? output : zeros, output, N,
-      phase0, freq, gain, dgain);
-#endif
-  } else {
-    if (add) {
+  
+  if (add) {
       for (int i = 0; i < N; i++) {
         gain += dgain;
         int32_t y = Sin::lookup(phase + input[i]);
@@ -64,7 +59,7 @@ void FmOpKernel::compute(int32_t *output, const int32_t *input,
         output[i] += y1;
         phase += freq;
       }
-    } else {
+  } else {
       for (int i = 0; i < N; i++) {
         gain += dgain;
         int32_t y = Sin::lookup(phase + input[i]);
@@ -72,7 +67,6 @@ void FmOpKernel::compute(int32_t *output, const int32_t *input,
         output[i] = y1;
         phase += freq;
       }
-    }
   }
 }
 

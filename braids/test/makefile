@@ -1,4 +1,4 @@
-PACKAGES       = braids/test stmlib/utils braids
+PACKAGES       = braids/test stmlib/utils braids braids/dexed
 
 VPATH          = $(PACKAGES)
 
@@ -20,8 +20,6 @@ CC_FILES       = dexed_audio_processor.cc \
 		env.cc \
 		fm_op_kernel.cc \
 		sin.cc
-
-
 
 OBJ_FILES      = $(CC_FILES:.cc=.o)
 OBJS           = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)
