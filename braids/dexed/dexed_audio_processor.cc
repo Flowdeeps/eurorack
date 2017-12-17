@@ -34,7 +34,8 @@
 #include "aligned_buf.h"
 #include "fm_op_kernel.h"
 
-FmCore fmCore;
+//FmCore fmCore;
+ EngineMkI engineMkI;
 
 //==============================================================================
 DexedAudioProcessor::DexedAudioProcessor() {
@@ -129,9 +130,10 @@ void DexedAudioProcessor::releaseResources() {
     }
 }
 
-void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelData, size_t numSamples) {
+void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelData, size_t origSamples) {
     unsigned int i;
-    
+    unsigned int numSamples = origSamples >> 1;
+
     if ( refreshVoice ) {
         for(i=0;i < MAX_ACTIVE_NOTES;i++) {
             if ( voices[i].live )
@@ -163,7 +165,8 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
 
     // flush first events
     for (i=0; i < numSamples && i < extra_buf_size; i++) {
-        channelData[i] = extra_buf[i];
+        channelData[(i<<1)] = extra_buf[i];
+        channelData[(i<<1)+1] = extra_buf[i];
     }
     
     // remaining buffer is still to be processed
@@ -190,7 +193,8 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
             int jmax = numSamples - i;
             for (int j = 0; j < N; ++j) {
                 if (j < jmax) {
-                    channelData[i + j] = audiobuf[j] >> 13;
+                    channelData[(i + j) << 1] = audiobuf[j] >> 13;
+                    channelData[((i + j) << 1)+1] = audiobuf[j] >> 13;
                 } else {
                     extra_buf[j - jmax] = audiobuf[j] >> 13;
                 }

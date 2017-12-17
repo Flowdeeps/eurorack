@@ -18,7 +18,7 @@
 #include <cstring>
 #include <cstdlib>
 
-#include "braids/dexed_audio_processor.h"
+#include "braids/dexed/dexed_audio_processor.h"
 #include "braids/quantizer.h"
 #include "stmlib/test/wav_writer.h"
 #include "stmlib/utils/dsp.h"

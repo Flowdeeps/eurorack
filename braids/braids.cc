@@ -165,7 +165,7 @@ void Init() {
   current_sample = 0;
   
   envelope.Init();
-  osc.prepareToPlay(96000, kBlockSize);
+  osc.prepareToPlay(48000, kBlockSize);
 
   ws.Init(GetUniqueId(1));
   jitter_source.Init();
