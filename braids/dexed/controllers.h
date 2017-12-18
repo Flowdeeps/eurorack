@@ -26,11 +26,6 @@
 #define snprintf _snprintf
 #endif
 
-// State of MIDI controllers
-const int kControllerPitch = 128;
-const int kControllerPitchRange = 129;
-const int kControllerPitchStep = 130;
-
 class FmCore;
 
 struct FmMod {
@@ -44,20 +39,6 @@ struct FmMod {
         pitch = false;
         amp = false;
         eg = false;
-    }
-
-    void parseConfig(const char *cfg) {
-        int r = 0, p = 0, a = 0, e = 0;
-        sscanf(cfg, "%d %d %d %d", &r, &p, &a, &e);
-        
-        range = r < 0 && r > 127 ? 0 : r;
-        pitch = p != 0;
-        amp = a != 0;
-        eg = e != 0;
-    }
-    
-    void setConfig(char *cfg) {
-        snprintf(cfg, 13, "%d %d %d %d", range, pitch, amp, eg);
     }
 };
 
@@ -75,9 +56,7 @@ class Controllers {
             eg_mod = max(eg_mod, total);
     }
     
-public:
-    int values_[131];
-    
+public:    
     char opSwitch[7];
     
     int amp_mod;
@@ -88,9 +67,7 @@ public:
     int breath_cc;
     int foot_cc;
     int modwheel_cc;
-    
-    int masterTune;
-    
+        
     FmMod wheel;
     FmMod foot;
     FmMod breath;

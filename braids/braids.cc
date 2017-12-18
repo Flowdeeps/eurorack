@@ -38,7 +38,6 @@
 #include "braids/drivers/internal_adc.h"
 #include "braids/drivers/system.h"
 #include "braids/envelope.h"
-#include "braids/macro_oscillator.h"
 #include "braids/quantizer.h"
 #include "braids/signature_waveshaper.h"
 #include "braids/vco_jitter_source.h"
@@ -82,6 +81,7 @@ bool gate_state;
 bool last_gate_state;
 volatile bool trigger_flag;
 uint16_t trigger_delay;
+int previous_shape;
 
 extern "C" {
   
@@ -197,28 +197,34 @@ void RenderBlock() {
       settings.GetValue(SETTING_AD_DECAY) * 8);
   uint32_t ad_value = envelope.Render();
   
-  // if (ui.paques()) {
-  //   osc.set_shape(MACRO_OSC_SHAPE_QUESTION_MARK);
-  // } else if (settings.meta_modulation()) {
-  //   int16_t shape = adc.channel(3);
-  //   shape -= settings.data().fm_cv_offset;
-  //   if (shape > previous_shape + 2 || shape < previous_shape - 2) {
-  //     previous_shape = shape;
-  //   } else {
-  //     shape = previous_shape;
-  //   }
-  //   shape = MACRO_OSC_SHAPE_LAST * shape >> 11;
-  //   shape += settings.shape();
-  //   if (shape >= MACRO_OSC_SHAPE_LAST_ACCESSIBLE_FROM_META) {
-  //     shape = MACRO_OSC_SHAPE_LAST_ACCESSIBLE_FROM_META;
-  //   } else if (shape <= 0) {
-  //     shape = 0;
-  //   }
-  //   MacroOscillatorShape osc_shape = static_cast<MacroOscillatorShape>(shape);
-  //   osc.set_shape(osc_shape);
-  //   ui.set_meta_shape(osc_shape);
-  // } else {
-  //   osc.set_shape(settings.shape());
+  if (settings.meta_modulation()) {
+    int16_t shape = adc.channel(3);
+    shape -= settings.data().fm_cv_offset;
+    if (shape > previous_shape + 2 || shape < previous_shape - 2) {
+      previous_shape = shape;
+    } else {
+      shape = previous_shape;
+    }
+    shape = MACRO_OSC_SHAPE_LAST * shape >> 11;
+    shape += settings.shape();
+    if (shape >= MACRO_OSC_SHAPE_LAST_ACCESSIBLE_FROM_META) {
+      shape = MACRO_OSC_SHAPE_LAST_ACCESSIBLE_FROM_META;
+    } else if (shape <= 0) {
+      shape = 0;
+    }
+    MacroOscillatorShape osc_shape = static_cast<MacroOscillatorShape>(shape);
+    osc.set_shape(osc_shape);
+    ui.set_meta_shape(osc_shape);
+  } else {
+    osc.set_shape(settings.shape());
+  }
+
+  // int16_t shape = adc.channel(3);
+  // shape -= settings.data().fm_cv_offset;
+  // shape = shape >> 11;
+  // if (shape != previous_shape) {
+  //   osc.selectPatch(shape);
+  //   previous_shape = shape;
   // }
   
   // Set timbre and color: CV + internal modulation.
@@ -239,8 +245,9 @@ void RenderBlock() {
       settings.adc_to_pitch(adc.channel(2)),
       (60 + settings.quantizer_root()) << 7);
   if (!settings.meta_modulation()) {
-    pitch += settings.adc_to_fm(adc.channel(3));
+   pitch += settings.adc_to_fm(adc.channel(3));
   }
+  
   // Check if the pitch has changed to cause an auto-retrigger
   int32_t pitch_delta = pitch - previous_pitch;
   if (settings.data().auto_trig &&

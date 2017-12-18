@@ -138,9 +138,10 @@ int main(int argc, char **argv) {
 
         size_t newLen = fread(buf, sizeof(char), size, fp);
     }
-    for (int i = 0; 6 + (i * 128) < size; i++) {
+    int i;
+    for (i = 0; 6 + (i * 128) < size; i++) {
         unpackProgram(buf, &pgm[0], i);
-        printf("char pgm%d = {\n", i);
+        printf("const unsigned char pgm%d[] = {\n", i);
         for (int j = 0; j < 161; j++) {
             printf("%d", pgm[j]);
             if (j != 160) {
@@ -151,6 +152,18 @@ int main(int argc, char **argv) {
             }
         }
         printf("};\n\n");
+    }
+
+    printf("const unsigned char *voices[] = {");
+
+    for (int j = 0; j < i; j++) {
+        printf("pgm%d", j);
+        if (j < i-1) {
+            printf(", ");
+        }
+        if (j % 8 == 7) {
+            printf("\n");
+        }
     }
 
     fclose(fp);

@@ -57,7 +57,7 @@ class DexedAudioProcessor
 {
     static const int MAX_ACTIVE_NOTES = 1;
     ProcessorVoice voices[MAX_ACTIVE_NOTES];
-    int currentNote;
+    int curShape;
 
     // The original DX7 had one single LFO. Later units had an LFO per note.
     Lfo lfo;
@@ -118,12 +118,14 @@ public :
     ~DexedAudioProcessor();
 
     //==============================================================================
+    void set_shape(int i);
+    void reset();
+
     void prepareToPlay (double sampleRate, int samplesPerBlock);
     void releaseResources();
     //void processBlock (AudioSampleBuffer& buffer, MidiBuffer& midiMessages);
     void panic();
     
-    bool peekVoiceStatus();
     void updateProgramFromSysex(const uint8_t *rawdata);
     void setupStartupCart();
 
@@ -137,8 +139,10 @@ public :
     inline void set_parameters(
           int16_t parameter_1,
           int16_t parameter_2) {
-      parameter_[0] = parameter_1;
-      parameter_[1] = parameter_2;
+
+      controllers.modwheel_cc = parameter_1 >> 9;
+      controllers.breath_cc = parameter_2 >> 9;
+      controllers.refresh();
     }
   
   inline void Strike() {

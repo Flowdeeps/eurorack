@@ -192,20 +192,6 @@ void Dx7Note::compute(int32_t *buf, int32_t lfo_val, int32_t lfo_delay, const Co
     pmod_1 = max(pmod_1, pmod_2);
     pmod_1 = pitchenv_.getsample() + (pmod_1 * (senslfo < 0 ? -1 : 1));
     
-    // ---- PITCH BEND ----
-    int32_t pb = (ctrls->values_[kControllerPitch] - 0x2000);
-    if (pb != 0) {
-        if (ctrls->values_[kControllerPitchStep] == 0) {
-            pb = ((float) (pb << 11)) * ((float) ctrls->values_[kControllerPitchRange]) / 12.0;
-        } else {
-            int stp = 12 / ctrls->values_[kControllerPitchStep];
-            pb = pb * stp / 8191;
-            pb = (pb * (8191 / stp)) << 11;
-        }
-    }
-    pmod_1 += pb;
-    pmod_1 += ctrls->masterTune;
-    
     // ==== AMP MOD ====
     uint32_t amod_1 = ((int64_t) ampmoddepth_ * (int64_t) lfo_delay) >> 8; // Q24 :D
     amod_1 = ((int64_t) amod_1 * (int64_t) lfo_val) >> 24;
