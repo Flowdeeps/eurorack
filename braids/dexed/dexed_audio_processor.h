@@ -140,9 +140,9 @@ public :
           int16_t parameter_1,
           int16_t parameter_2) {
 
-      controllers.modwheel_cc = parameter_1 >> 9;
-      controllers.breath_cc = parameter_2 >> 9;
-      controllers.refresh();
+     // controllers.modwheel_cc = parameter_1 >> 9;
+     // controllers.breath_cc = parameter_2 >> 9;
+     // controllers.refresh();
     }
   
   inline void Strike() {

@@ -28,10 +28,15 @@ const int FEEDBACK_BITDEPTH = 8;
 
 extern EngineMkI engineMkI;
 
-int32_t midinote_to_logfreq(int midinote) {
+int32_t braids_pitch_to_logfreq(int braids_pitch) {
     const int base = 50857777;  // (1 << 24) * (log(440) / log(2) - 69/12)
-    const int step = (1 << 24) / 12;
-    return base + step * midinote;
+    // braids pitch is (step << 7)
+    // midi note 0 braids 0 dexed 0
+    // midi note 1 braids 128 dexed (1 << 24 / 12);
+    // does (braids << 17) work?
+
+    // originally this was (1 << 24) / 12;
+    return base + ((braids_pitch << 17) / 12);
 }
 
 const int32_t coarsemul[] = {
@@ -42,26 +47,127 @@ const int32_t coarsemul[] = {
     81503396, 82323963, 83117622
 };
 
-// int32_t osc_freq(int midinote, int mode, int coarse, int fine, int detune) {
-//     // TODO: pitch randomization
-//     int32_t logfreq;
-//     if (mode == 0) {
-//         logfreq = midinote_to_logfreq(midinote);
-//         logfreq += coarsemul[coarse & 31];
-//         if (fine) {
-//             // (1 << 24) / log(2)
-//             logfreq += (int32_t)floor(24204406.323123 * log(1 + 0.01 * fine) + 0.5);
-//         }
-//         // This was measured at 7.213Hz per count at 9600Hz, but the exact
-//         // value is somewhat dependent on midinote. Close enough for now.
-//         logfreq += 12606 * (detune - 7);
-//     } else {
-//         // ((1 << 24) * log(10) / log(2) * .01) << 3
-//         logfreq = (4458616 * ((coarse & 3) * 100 + fine)) >> 3;
-//         logfreq += detune > 7 ? 13457 * (detune - 7) : 0;
-//     }
-//     return logfreq;
-// }
+const int32_t fine_freq_lut[] = {
+    0,
+240842,
+479311,
+715453,
+949314,
+1180937,
+1410364,
+1637637,
+1862796,
+2085880,
+2306926,
+2525972,
+2743054,
+2958205,
+3171461,
+3382855,
+3592418,
+3800183,
+4006179,
+4210437,
+4412985,
+4613853,
+4813067,
+5010655,
+5206643,
+5401057,
+5593922,
+5785262,
+5975102,
+6163464,
+6350371,
+6535847,
+6719911,
+6902587,
+7083894,
+7263853,
+7442485,
+7619807,
+7795840,
+7970602,
+8144111,
+8316385,
+8487441,
+8657298,
+8825970,
+8993475,
+9159829,
+9325048,
+9489146,
+9652139,
+9814042,
+9974869,
+10134635,
+10293353,
+10451037,
+10607700,
+10763356,
+10918018,
+11071697,
+11224407,
+11376159,
+11526966,
+11676839,
+11825789,
+11973829,
+12120969,
+12267219,
+12412591,
+12557096,
+12700743,
+12843542,
+12985504,
+13126637,
+13266953,
+13406460,
+13545168,
+13683085,
+13820221,
+13956584,
+14092183,
+14227027,
+14361124,
+14494482,
+14627109,
+14759014,
+14890203,
+15020685,
+15150468,
+15279559,
+15407964,
+15535692,
+15662750,
+15789144,
+15914881,
+16039969,
+16164413,
+16288221,
+16411399,
+16533954,
+16655890
+};
+
+int32_t osc_freq(int braids_pitch, int mode, int coarse, int fine, int detune) {
+    // TODO: pitch randomization
+    int32_t logfreq;
+    if (mode == 0) {
+        logfreq = braids_pitch_to_logfreq(braids_pitch);
+        logfreq += coarsemul[coarse & 31];
+        // TODO: could be (1 << 24) / log(2) instaed of old
+        logfreq += fine_freq_lut[fine];
+        // This was measured at 7.213Hz per count at 9600Hz, but the exact
+        // value is somewhat dependent on midinote. Close enough for now.
+        logfreq += 12606 * (detune - 7);
+    } else {
+        // ((1 << 24) * log(10) / log(2) * .01) << 3
+        logfreq = (4458616 * ((coarse & 3) * 100 + fine)) >> 3;
+        logfreq += detune > 7 ? 13457 * (detune - 7) : 0;
+    }
+    return logfreq;
+}
 
 const uint8_t velocity_data[64] = {
     0, 70, 86, 97, 106, 114, 121, 126, 132, 138, 142, 148, 152, 156, 160, 163,
@@ -166,7 +272,11 @@ void Dx7Note::init(const uint8_t *patch, int16_t braids_pitch, int velocity) {
         // braids pitch is 128 per semi
         // dexed is 1398101 per semi
         // so factor is (1398101 / 128) = 10922.6640625
-        basepitch_[op] = 50857777 + (braids_pitch * 10922.6);
+        int mode = patch[off + 17];
+        int coarse = patch[off + 18];
+        int fine = patch[off + 19];
+        int detune = patch[off + 20];
+        basepitch_[op] = osc_freq(braids_pitch, mode, coarse, fine, detune);
         ampmodsens_[op] = ampmodsenstab[patch[off + 14] & 3];
     }
     for (int i = 0; i < 4; i++) {
@@ -181,6 +291,12 @@ void Dx7Note::init(const uint8_t *patch, int16_t braids_pitch, int velocity) {
     pitchmodsens_ = pitchmodsenstab[patch[143] & 7];
     ampmoddepth_ = (patch[140] * 165) >> 6;
 }
+
+// instead of using exp() and the original math, I fit a few points into a parabola.
+// .. heh
+const float exp_a = 12653573342423.0 / 177961382838934369968.0;
+const float exp_b = -28572471408561369211.0 / 177961382838934369968.0;
+const float exp_c = 1;
 
 void Dx7Note::compute(int32_t *buf, int32_t lfo_val, int32_t lfo_delay, const Controllers *ctrls) {
     // ==== PITCH ====
@@ -213,10 +329,10 @@ void Dx7Note::compute(int32_t *buf, int32_t lfo_val, int32_t lfo_delay, const Co
             
             int32_t level = env_[op].getsample();
             if (ampmodsens_[op] != 0) {
-                //uint32_t sensamp = ((uint64_t) amd_mod) * ((uint64_t) ampmodsens_[op]) >> 24;
+                uint32_t sensamp = ((uint64_t) amod_1) * ((uint64_t) ampmodsens_[op]) >> 24;
                 
                 // TODO: mehhh.. this needs some real tuning.
-                uint32_t pt = 1;// fm_exp(((float)sensamp)/262144 * 0.07 + 12.2);
+                uint32_t pt = (exp_a * sensamp * sensamp) + (exp_b * sensamp) + exp_c;
                 uint32_t ldiff = ((uint64_t)level) * (((uint64_t)pt<<4)) >> 28;
                 level -= ldiff;
             }
@@ -252,7 +368,11 @@ void Dx7Note::update(const uint8_t *patch, int16_t braids_pitch, int velocity) {
         // braids pitch is 128 per semi
         // dexed is 1398101 per semi
         // so factor is (1398101 / 128) = 10922.6640625
-        basepitch_[op] = 50857777 + (braids_pitch * 10922.6);
+        int mode = patch[off + 17];
+        int coarse = patch[off + 18];
+        int fine = patch[off + 19];
+        int detune = patch[off + 20];
+        basepitch_[op] = osc_freq(braids_pitch, mode, coarse, fine, detune);
         ampmodsens_[op] = ampmodsenstab[patch[off + 14] & 3];
         
         for (int i = 0; i < 4; i++) {

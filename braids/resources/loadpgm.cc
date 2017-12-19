@@ -141,7 +141,7 @@ int main(int argc, char **argv) {
     int i;
     for (i = 0; 6 + (i * 128) < size; i++) {
         unpackProgram(buf, &pgm[0], i);
-        printf("const unsigned char pgm%d[] = {\n", i);
+        printf("const unsigned char pgm%d[] = {\n", i+32);
         for (int j = 0; j < 161; j++) {
             printf("%d", pgm[j]);
             if (j != 160) {
@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
     printf("const unsigned char *voices[] = {");
 
     for (int j = 0; j < i; j++) {
-        printf("pgm%d", j);
+        printf("pgm%d", j+32);
         if (j < i-1) {
             printf(", ");
         }

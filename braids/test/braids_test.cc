@@ -31,36 +31,39 @@ const uint16_t kAudioBlockSize = 24;
 
 void TestAudioRendering() {
   DexedAudioProcessor osc;
-  WavWriter wav_writer(1, kSampleRate, 5);
+  WavWriter wav_writer(1, kSampleRate, 64*4);
   wav_writer.Open("oscillator.wav");
 
   osc.prepareToPlay(96000, kAudioBlockSize);
-  osc.selectPatch(5);
-  int n = 3;
 
-  for (uint32_t i = 0; i < kSampleRate * 10 / kAudioBlockSize; ++i) {
-    if ((i % 3000) == 1900) {
-      osc.set_gatestate(false);
+  for (int shape = 32; shape < 33; shape++) {
+    printf("Shape %d\n", shape);
+    osc.set_shape(shape);
+    int n = 20;
+    for (uint32_t i = 0; i < kSampleRate * 4 / kAudioBlockSize; ++i) {
+      if ((i % 3000) == 1900) {
+        osc.set_gatestate(false);
+      }
+      if ((i % 3000) == 0) {
+        osc.set_pitch((n << 7));
+        n+=12;
+        osc.Strike();
+        osc.set_gatestate(true);
+      }
+      osc.set_pitch((n << 7) + rand() % 20);
+      int16_t buffer[kAudioBlockSize];
+      uint8_t sync_buffer[kAudioBlockSize];
+      uint16_t tri = (i / 2);
+      uint16_t tri2 = (i / 3);
+      uint16_t ramp = i * 150;
+      tri = tri > 32767 ? 65535 - tri : tri;
+      tri2 = tri2 > 32767 ? 65535 - tri2 : tri2;
+      //osc.set_parameters(tri, tri2);
+      memset(sync_buffer, 0, sizeof(sync_buffer));
+      //sync_buffer[0] = (i % 32) == 0 ? 1 : 0;
+      osc.Render(sync_buffer, buffer, kAudioBlockSize);
+      wav_writer.WriteFrames(buffer, kAudioBlockSize);
     }
-    if ((i % 3000) == 0) {
-      osc.set_pitch((n << 7));
-      n+=12;
-      osc.Strike();
-      osc.set_gatestate(true);
-    }
-    osc.set_pitch((n << 7) + rand() % 20);
-    int16_t buffer[kAudioBlockSize];
-    uint8_t sync_buffer[kAudioBlockSize];
-    uint16_t tri = (i / 2);
-    uint16_t tri2 = (i / 3);
-    uint16_t ramp = i * 150;
-    tri = tri > 32767 ? 65535 - tri : tri;
-    tri2 = tri2 > 32767 ? 65535 - tri2 : tri2;
-    osc.set_parameters(tri, tri2);
-    memset(sync_buffer, 0, sizeof(sync_buffer));
-    //sync_buffer[0] = (i % 32) == 0 ? 1 : 0;
-    osc.Render(sync_buffer, buffer, kAudioBlockSize);
-    wav_writer.WriteFrames(buffer, kAudioBlockSize);
   }
 }
 
