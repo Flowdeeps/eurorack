@@ -746,6 +746,7 @@ void DexedAudioProcessor::set_shape(int i) {
 }
 
 void DexedAudioProcessor::reset() {
+    keyup();
     for (int note = 0; note < MAX_ACTIVE_NOTES; ++note) {
         voices[note].keydown = false;
         voices[note].sustained = false;
@@ -793,16 +794,13 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
         for(i=0;i < MAX_ACTIVE_NOTES;i++) {
             voices[i].braids_pitch = pitch_;
             if ( voices[i].live )
-                voices[i].dx7_note.updatePitch(pitch_);
+                voices[i].dx7_note.update(data, pitch_, voices[i].velocity);
         }
     }
 
     if (!gatestate_ && voices[0].keydown) {
         keyup();
     } else if (noteStart_) {
-        // int16_t ranges from -32768 to 32767
-        // midi ranges from 0 to 127
-        // parameter + 32768 >> 
         keydown();
         noteStart_ = false;
     }

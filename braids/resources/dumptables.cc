@@ -65,7 +65,7 @@ int main(int argc, char **argv)
     Sin::init();
     calctables();
 
-    int32_t sampleRate = 96000;
+    int32_t sampleRate = 48000;
     Freqlut::init(sampleRate);
 
     printf("#include <math.h>\n#include \"synth.h\"\n");

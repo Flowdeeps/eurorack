@@ -22,7 +22,7 @@
 #include <stdint.h>
 #include <math.h>
 
-#include "../freqlut.h"
+#include "../dexed/freqlut.h"
 
 #define LG_N_SAMPLES 10
 #define N_SAMPLES (1 << LG_N_SAMPLES)

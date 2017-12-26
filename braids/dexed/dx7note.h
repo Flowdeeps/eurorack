@@ -54,8 +54,6 @@ public:
     // PG:add the update
     void update(const uint8_t *patch, int16_t braids_pitch, int velocity);
 
-    void updatePitch(int16_t braids_pitch);
-
     void peekVoiceStatus(VoiceStatus &status);
     void transferState(Dx7Note& src);
     void transferSignal(Dx7Note &src);

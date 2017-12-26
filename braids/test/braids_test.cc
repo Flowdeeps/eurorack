@@ -26,7 +26,7 @@
 using namespace braids;
 using namespace stmlib;
 
-const uint32_t kSampleRate = 96000;
+const uint32_t kSampleRate = 48000;
 const uint16_t kAudioBlockSize = 24;
 
 void TestAudioRendering() {
@@ -34,9 +34,9 @@ void TestAudioRendering() {
   WavWriter wav_writer(1, kSampleRate, 64*4);
   wav_writer.Open("oscillator.wav");
 
-  osc.prepareToPlay(96000, kAudioBlockSize);
+  osc.prepareToPlay(48000, kAudioBlockSize);
 
-  for (int shape = 32; shape < 33; shape++) {
+  for (int shape = 30; shape < 33; shape++) {
     printf("Shape %d\n", shape);
     osc.set_shape(shape);
     int n = 20;

@@ -388,7 +388,6 @@ void EngineMkI::compute_fb(int32_t *output, int32_t phase0, int32_t freq,
     const int32_t *adder = add ? output : zeros;
     int32_t y0 = fb_buf[0];
     int32_t y = fb_buf[1];
-    
     for (int i = 0; i < N; i++) {
         gain += dgain;
         int32_t scaled_fb = (y0 + y) >> (fb_shift + 1);
@@ -409,7 +408,7 @@ void EngineMkI::compute_fb2(int32_t *output, FmOpParams *parms, int32_t gain01, 
     int32_t phase[2];
     int32_t y0 = fb_buf[0];
     int32_t y = fb_buf[1];
-    
+
     phase[0] = parms[0].phase;
     phase[1] = parms[1].phase;
 

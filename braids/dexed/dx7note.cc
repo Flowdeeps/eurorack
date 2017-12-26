@@ -269,14 +269,12 @@ void Dx7Note::init(const uint8_t *patch, int16_t braids_pitch, int velocity) {
         int rate_scaling = ScaleRate(midinote, patch[off + 13]);
         env_[op].init(rates, levels, outlevel, rate_scaling);
         
-        // braids pitch is 128 per semi
-        // dexed is 1398101 per semi
-        // so factor is (1398101 / 128) = 10922.6640625
         int mode = patch[off + 17];
         int coarse = patch[off + 18];
         int fine = patch[off + 19];
         int detune = patch[off + 20];
         basepitch_[op] = osc_freq(braids_pitch, mode, coarse, fine, detune);
+
         ampmodsens_[op] = ampmodsenstab[patch[off + 14] & 3];
     }
     for (int i = 0; i < 4; i++) {
@@ -301,12 +299,16 @@ const float exp_c = 1;
 void Dx7Note::compute(int32_t *buf, int32_t lfo_val, int32_t lfo_delay, const Controllers *ctrls) {
     // ==== PITCH ====
     int32_t senslfo = pitchmodsens_ * (lfo_val - (1 << 23));
-    int32_t pmod_1 = (((int64_t) (pitchmoddepth_ * lfo_delay)) * (int64_t) senslfo) >> 39;
+    uint32_t pmd = pitchmoddepth_ * lfo_delay;  // Q32
+    int32_t pmod_1 = (((int64_t) pmd) * (int64_t) senslfo) >> 39;
+
+    pmod_1 = (((int64_t) pmod_1) * (int64_t) senslfo) >> 39;
     pmod_1 = abs(pmod_1);
     int32_t pmod_2 = ((int64_t)ctrls->pitch_mod * (int64_t)senslfo) >> 14;
     pmod_2 = abs(pmod_2);
     pmod_1 = max(pmod_1, pmod_2);
-    pmod_1 = pitchenv_.getsample() + (pmod_1 * (senslfo < 0 ? -1 : 1));
+    pmod_2 = pitchenv_.getsample();
+    pmod_1 = pmod_2 + (pmod_1 * (senslfo < 0 ? -1 : 1));
     
     // ==== AMP MOD ====
     uint32_t amod_1 = ((int64_t) ampmoddepth_ * (int64_t) lfo_delay) >> 8; // Q24 :D
@@ -334,6 +336,7 @@ void Dx7Note::compute(int32_t *buf, int32_t lfo_val, int32_t lfo_delay, const Co
                 // TODO: mehhh.. this needs some real tuning.
                 uint32_t pt = (exp_a * sensamp * sensamp) + (exp_b * sensamp) + exp_c;
                 uint32_t ldiff = ((uint64_t)level) * (((uint64_t)pt<<4)) >> 28;
+
                 level -= ldiff;
             }
             params_[op].level_in = level;
@@ -347,12 +350,6 @@ void Dx7Note::keyup() {
         env_[op].keydown(false);
     }
     pitchenv_.keydown(false);
-}
-
-void Dx7Note::updatePitch(int16_t braids_pitch) {
-    for (int op = 0; op < 6; op++) {
-        basepitch_[op] = 50857777 + (braids_pitch * 10922.6);
-    }
 }
 
 int updaterates[4];
