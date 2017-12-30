@@ -51,7 +51,6 @@ DexedAudioProcessor::DexedAudioProcessor() {
         
     TRACE("controler %s", controllers.opSwitch);
     
-    normalizeDxVelocity = false;
     showKeyboard = true;
     
     memset(&voiceStatus, 0, sizeof(VoiceStatus));
@@ -737,7 +736,7 @@ void DexedAudioProcessor::set_shape(int i) {
         return;
     }
     curShape = i;
-    if (i > 31) { i = 31; }
+    if (i > 63) { i = 63; }
     const unsigned char *pgm = pgms[i];
     for(unsigned int i=0;i<161;i++) {
         data[i] = pgm[i];
@@ -784,7 +783,7 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
     if ( refreshVoice ) {
         for(i=0;i < MAX_ACTIVE_NOTES;i++) {
             if ( voices[i].live )
-                voices[i].dx7_note.update(data, pitch_, voices[i].velocity);
+                voices[i].dx7_note.update(data, pitch_, voices[i].velocity, false);
         }
         lfo.reset(data + 137);
         refreshVoice = false;
@@ -794,7 +793,7 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
         for(i=0;i < MAX_ACTIVE_NOTES;i++) {
             voices[i].braids_pitch = pitch_;
             if ( voices[i].live )
-                voices[i].dx7_note.update(data, pitch_, voices[i].velocity);
+                voices[i].dx7_note.update(data, pitch_, voices[i].velocity, false);
         }
     }
 
@@ -912,10 +911,7 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
 // }
 
 void DexedAudioProcessor::keydown() {
-    uint8_t velo = 127; //(parameter_[0] + 32768) >> 9;
-    if ( normalizeDxVelocity ) {
-        velo = ((float)velo) * 0.7874015; // 100/127
-    }
+    uint8_t velo = 100; //(parameter_[0] + 32768) >> 9;
     
     int note = 0;
     for (int i=0; i<MAX_ACTIVE_NOTES; i++) {

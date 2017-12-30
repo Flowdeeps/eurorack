@@ -74,7 +74,6 @@ class DexedAudioProcessor
      * and needs to be updated.
      */
     bool refreshVoice;
-    bool normalizeDxVelocity;
     
     void keydown();
     void keyup();

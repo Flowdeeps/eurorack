@@ -355,38 +355,36 @@ void Dx7Note::keyup() {
 int updaterates[4];
 int updatelevels[4];
 
-void Dx7Note::update(const uint8_t *patch, int16_t braids_pitch, int velocity) {
-
+void Dx7Note::update(const uint8_t *patch, int16_t braids_pitch, int velocity, bool updateEnv) {
     int midinote = braids_pitch >> 7;
 
     for (int op = 0; op < 6; op++) {
         int off = op * 21;
         
-        // braids pitch is 128 per semi
-        // dexed is 1398101 per semi
-        // so factor is (1398101 / 128) = 10922.6640625
         int mode = patch[off + 17];
         int coarse = patch[off + 18];
         int fine = patch[off + 19];
         int detune = patch[off + 20];
         basepitch_[op] = osc_freq(braids_pitch, mode, coarse, fine, detune);
         ampmodsens_[op] = ampmodsenstab[patch[off + 14] & 3];
-        
-        for (int i = 0; i < 4; i++) {
-            updaterates[i] = patch[off + i];
-            updatelevels[i] = patch[off + 4 + i];
+     
+        if (updateEnv) {
+            for (int i = 0; i < 4; i++) {
+                updaterates[i] = patch[off + i];
+                updatelevels[i] = patch[off + 4 + i];
+            }
+            int outlevel = patch[off + 16];
+            outlevel = Env::scaleoutlevel(outlevel);
+            int level_scaling = ScaleLevel(midinote, patch[off + 8], patch[off + 9],
+                                           patch[off + 10], patch[off + 11], patch[off + 12]);
+            outlevel += level_scaling;
+            outlevel = min(127, outlevel);
+            outlevel = outlevel << 5;
+            outlevel += ScaleVelocity(velocity, patch[off + 15]);
+            outlevel = max(0, outlevel);
+            int rate_scaling = ScaleRate(midinote, patch[off + 13]);
+            env_[op].update(updaterates, updatelevels, outlevel, rate_scaling);
         }
-        int outlevel = patch[off + 16];
-        outlevel = Env::scaleoutlevel(outlevel);
-        int level_scaling = ScaleLevel(midinote, patch[off + 8], patch[off + 9],
-                                       patch[off + 10], patch[off + 11], patch[off + 12]);
-        outlevel += level_scaling;
-        outlevel = min(127, outlevel);
-        outlevel = outlevel << 5;
-        outlevel += ScaleVelocity(velocity, patch[off + 15]);
-        outlevel = max(0, outlevel);
-        int rate_scaling = ScaleRate(midinote, patch[off + 13]);
-        env_[op].update(updaterates, updatelevels, outlevel, rate_scaling);
     }
     algorithm_ = patch[134];
     int feedback = patch[135];

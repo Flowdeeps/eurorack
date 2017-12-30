@@ -52,7 +52,7 @@ public:
     // keyup, that won't work.
     
     // PG:add the update
-    void update(const uint8_t *patch, int16_t braids_pitch, int velocity);
+    void update(const uint8_t *patch, int16_t braids_pitch, int velocity, bool updateEnv);
 
     void peekVoiceStatus(VoiceStatus &status);
     void transferState(Dx7Note& src);
