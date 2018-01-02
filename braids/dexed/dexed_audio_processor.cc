@@ -799,11 +799,19 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
             
             int jmax = numSamples - i;
             for (int j = 0; j < N; ++j) {
+                int32_t value = audiobuf[j] >> 12;
+                if (value > 32767) {
+                    value = 32767;
+                }
+                if (value < -32768) {
+                    value = -32768;
+                }
+                    
                 if (j < jmax) {
-                    channelData[(i + j) << 1] = audiobuf[j] >> 13;
-                    channelData[((i + j) << 1)+1] = audiobuf[j] >> 13;
+                    channelData[(i + j) << 1] = value;
+                    channelData[((i + j) << 1)+1] = value;
                 } else {
-                    extra_buf[j - jmax] = audiobuf[j] >> 13;
+                    extra_buf[j - jmax] = value;
                 }
             }
         }

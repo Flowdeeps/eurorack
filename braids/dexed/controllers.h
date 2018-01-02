@@ -77,10 +77,10 @@ public:
     }
 
     void defaults() {
-        timbre.range = 100;
+        timbre.range = 20;
         timbre.eg = true;
 
-        color.range = 100;
+        color.range = 20;
         color.amp = true;
     }
 

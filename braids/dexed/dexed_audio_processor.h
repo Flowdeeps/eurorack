@@ -115,8 +115,8 @@ public :
           int16_t parameter_1,
           int16_t parameter_2) {
 
-     controllers.timbre_amount = parameter_1 >> 9;
-     controllers.color_amount = parameter_2 >> 9;
+     controllers.timbre_amount = parameter_1 >> 8;
+     controllers.color_amount = parameter_2 >> 8;
 
      controllers.refresh();
     }
