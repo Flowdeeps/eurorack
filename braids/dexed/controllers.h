@@ -63,21 +63,25 @@ public:
     int pitch_mod;
     int eg_mod;
 
-    int aftertouch_cc;
-    int breath_cc;
-    int foot_cc;
-    int modwheel_cc;
+    int timbre_amount;
+    int color_amount;
         
-    FmMod wheel;
-    FmMod foot;
-    FmMod breath;
-    FmMod at;
+    FmMod timbre;
+    FmMod color;
     
     Controllers() {
         amp_mod = 0;
         pitch_mod = 0;
         eg_mod = 0;
-        strcpy(opSwitch, "111111");        
+        strcpy(opSwitch, "111111");
+    }
+
+    void defaults() {
+        timbre.range = 100;
+        timbre.eg = true;
+
+        color.range = 100;
+        color.amp = true;
     }
 
     void refresh() {
@@ -85,15 +89,11 @@ public:
         pitch_mod = 0;
         eg_mod = 0;
         
-        applyMod(modwheel_cc, wheel);
-        applyMod(breath_cc, breath);
-        applyMod(foot_cc, foot);
-        applyMod(aftertouch_cc, at);
+        applyMod(timbre_amount, timbre);
+        applyMod(color_amount, color);
         
-        if ( ! ((wheel.eg || foot.eg) || (breath.eg || at.eg)) )
+        if (!(timbre.eg || color.eg))
             eg_mod = 127;
-        
-        TRACE("amp_mod %d pitch_mod %d", amp_mod, pitch_mod);
     }
     
     FmCore *core;

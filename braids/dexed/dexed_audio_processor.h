@@ -98,7 +98,6 @@ public :
 
     void prepareToPlay (double sampleRate, int samplesPerBlock);
     void releaseResources();
-    //void processBlock (AudioSampleBuffer& buffer, MidiBuffer& midiMessages);
     void panic();
     
     void updateProgramFromSysex(const uint8_t *rawdata);
@@ -116,9 +115,10 @@ public :
           int16_t parameter_1,
           int16_t parameter_2) {
 
-     // controllers.modwheel_cc = parameter_1 >> 9;
-     // controllers.breath_cc = parameter_2 >> 9;
-     // controllers.refresh();
+     controllers.timbre_amount = parameter_1 >> 9;
+     controllers.color_amount = parameter_2 >> 9;
+
+     controllers.refresh();
     }
   
   inline void Strike() {

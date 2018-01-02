@@ -46,6 +46,8 @@ DexedAudioProcessor::DexedAudioProcessor() {
 #endif
 
     curShape = -1;
+
+    controllers.defaults();
         
     TRACE("controler %s", controllers.opSwitch);
         
@@ -723,7 +725,7 @@ char *DexedAudioProcessor::patchName() {
 }
 
 void DexedAudioProcessor::reset() {
-    keyup();
+    // keyup();
     for (int note = 0; note < MAX_ACTIVE_NOTES; ++note) {
         voices[note].keydown = false;
         voices[note].sustained = false;
@@ -731,13 +733,7 @@ void DexedAudioProcessor::reset() {
         voices[note].braids_pitch = 0;
     }
 
-    unpackOpSwitch(data[155]);
-
-
-    controllers.modwheel_cc = 0;
-    controllers.foot_cc = 0;
-    controllers.breath_cc = 0;
-    controllers.aftertouch_cc = 0;
+//    unpackOpSwitch(data[155]);
 
     extra_buf_size = 0;
         

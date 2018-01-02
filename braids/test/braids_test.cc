@@ -36,7 +36,7 @@ void TestAudioRendering() {
 
   osc.prepareToPlay(48000, kAudioBlockSize);
 
-  for (int shape = 30; shape < 33; shape++) {
+  for (int shape = 20; shape < 50; shape++) {
     printf("Shape %d\n", shape);
     osc.set_shape(shape);
     int n = 20;
@@ -53,12 +53,12 @@ void TestAudioRendering() {
       osc.set_pitch((n << 7) + rand() % 20);
       int16_t buffer[kAudioBlockSize];
       uint8_t sync_buffer[kAudioBlockSize];
-      uint16_t tri = (i / 2);
-      uint16_t tri2 = (i / 3);
+      uint16_t tri = i % 65535;
+      uint16_t tri2 = (i*2) % 65535;
       uint16_t ramp = i * 150;
       tri = tri > 32767 ? 65535 - tri : tri;
       tri2 = tri2 > 32767 ? 65535 - tri2 : tri2;
-      //osc.set_parameters(tri, tri2);
+      osc.set_parameters(tri, tri2);
       memset(sync_buffer, 0, sizeof(sync_buffer));
       //sync_buffer[0] = (i % 32) == 0 ? 1 : 0;
       osc.Render(sync_buffer, buffer, kAudioBlockSize);
