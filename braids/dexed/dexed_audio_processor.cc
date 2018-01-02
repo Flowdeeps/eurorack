@@ -731,6 +731,9 @@ void DexedAudioProcessor::reset() {
         voices[note].braids_pitch = 0;
     }
 
+    unpackOpSwitch(data[155]);
+
+
     controllers.modwheel_cc = 0;
     controllers.foot_cc = 0;
     controllers.breath_cc = 0;
@@ -812,69 +815,6 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
     }
 }
 
-// void DexedAudioProcessor::processMidiMessage(const MidiMessage *msg) {
-//     const uint8 *buf  = msg->getRawData();
-//     uint8_t cmd = buf[0];
-
-//     switch(cmd & 0xf0) {
-//         case 0x80 :
-//             keyup(buf[1]);
-//         return;
-
-//         case 0x90 :
-//             keydown(buf[1], buf[2]);
-//         return;
-            
-//         case 0xb0 : {
-//             int ctrl = buf[1];
-//             int value = buf[2];
-            
-//             switch(ctrl) {
-//                 case 1:
-//                     controllers.modwheel_cc = value;
-//                     controllers.refresh();
-//                     break;
-//                 case 2:
-//                     controllers.breath_cc = value;
-//                     controllers.refresh();
-//                     break;
-//                 case 4:
-//                     controllers.foot_cc = value;
-//                     controllers.refresh();
-//                     break;
-//                 case 64:
-//                     sustain = value > 63;
-//                     if (!sustain) {
-//                         for (int note = 0; note < MAX_ACTIVE_NOTES; note++) {
-//                             if (voices[note].sustained && !voices[note].keydown) {
-//                                 voices[note].dx7_note.keyup();
-//                                 voices[note].sustained = false;
-//                             }
-//                         }
-//                     }
-//                     break;
-//                 case 123:
-//                     panic();
-//                     break;
-//             }
-//         }
-//         return;
-            
-//         // aftertouch
-//         case 0xd0 :
-//             controllers.aftertouch_cc = buf[1];
-//             controllers.refresh();
-//         return;
-            
-//     }
-
-//     switch (cmd) {
-//         case 0xe0 :
-//             controllers.values_[kControllerPitch] = buf[1] | (buf[2] << 7);
-//         break;
-//     }
-// }
-
 void DexedAudioProcessor::keydown() {
     int note = 0;
     for (int i=0; i<MAX_ACTIVE_NOTES; i++) {
@@ -884,7 +824,7 @@ void DexedAudioProcessor::keydown() {
             voices[note].sustained = false;
             voices[note].keydown = true;
             voices[note].braids_pitch = pitch_;
-            voices[note].dx7_note.init(data, pitch_, velo);
+            voices[note].dx7_note.init(data, pitch_, 100);
 
             if ( data[136] )
                 voices[note].dx7_note.oscSync();
@@ -920,4 +860,13 @@ void DexedAudioProcessor::panic() {
         voices[i].live = false;
         voices[i].dx7_note.oscSync();
     }
+}
+
+void DexedAudioProcessor::unpackOpSwitch(char packOpValue) {
+    controllers.opSwitch[5] = (packOpValue & 32) + 48;
+    controllers.opSwitch[4] = (packOpValue & 16) + 48;
+    controllers.opSwitch[3] = (packOpValue & 8) + 48;
+    controllers.opSwitch[2] = (packOpValue & 4) + 48;
+    controllers.opSwitch[1] = (packOpValue & 2) + 48;
+    controllers.opSwitch[0] = (packOpValue & 1) + 48;
 }

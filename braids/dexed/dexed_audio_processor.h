@@ -67,7 +67,6 @@ class DexedAudioProcessor
         
     void resolvAppDir();
     
-    void unpackOpSwitch(char packOpValue);
     void packOpSwitch();
 
     int16_t parameter_[2];
@@ -79,8 +78,6 @@ public :
     // in MIDI units (0x4000 is neutral)
     Controllers controllers;
     const uint8_t *data;
-
-    bool monoMode;
 
     // Extra buffering for when GetSamples wants a buffer not a multiple of N
     int16_t extra_buf[N];
@@ -134,6 +131,8 @@ public :
   
   void Render(const uint8_t* sync_buffer, int16_t* buffer, size_t size);
   
+  void unpackOpSwitch(char packOpValue);
+
 private:
     //==============================================================================
     // JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DexedAudioProcessor)
