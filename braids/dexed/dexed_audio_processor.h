@@ -73,6 +73,7 @@ class DexedAudioProcessor
     int16_t pitch_;
 
     bool noteStart_, gatestate_;
+    int noteStartDelay_;
     
 public :
     // in MIDI units (0x4000 is neutral)

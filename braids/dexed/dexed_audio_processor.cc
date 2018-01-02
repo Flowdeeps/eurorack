@@ -48,6 +48,7 @@ DexedAudioProcessor::DexedAudioProcessor() {
     curShape = -1;
 
     controllers.defaults();
+    noteStartDelay_ = 0;
         
     TRACE("controler %s", controllers.opSwitch);
         
@@ -729,8 +730,6 @@ void DexedAudioProcessor::reset() {
     for (int note = 0; note < MAX_ACTIVE_NOTES; ++note) {
         voices[note].keydown = false;
         voices[note].sustained = false;
-        voices[note].live = false;
-        voices[note].braids_pitch = 0;
     }
 
 //    unpackOpSwitch(data[155]);
@@ -763,7 +762,9 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
 
     if (!gatestate_ && voices[0].keydown) {
         keyup();
-    } else if (noteStart_) {
+        noteStartDelay_ = 50;
+    }  
+    if (noteStart_ && noteStartDelay_ == 0) {
         keydown();
         noteStart_ = false;
     }
@@ -772,6 +773,9 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
 
     // flush first events
     for (i=0; i < numSamples && i < extra_buf_size; i++) {
+        if (noteStartDelay_ > 0) {
+            noteStartDelay_--;
+        }
         channelData[(i<<1)] = extra_buf[i];
         channelData[(i<<1)+1] = extra_buf[i];
     }
@@ -808,6 +812,9 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
                 }
                     
                 if (j < jmax) {
+                    if (noteStartDelay_ > 0) {
+                        noteStartDelay_--;
+                    }
                     channelData[(i + j) << 1] = value;
                     channelData[((i + j) << 1)+1] = value;
                 } else {
@@ -823,7 +830,8 @@ void DexedAudioProcessor::keydown() {
     int note = 0;
     for (int i=0; i<MAX_ACTIVE_NOTES; i++) {
         if (!voices[note].keydown) {
-            lfo.keydown();  // TODO: should only do this if # keys down was 0
+            lfo.keydown();
+            voices[note].live = true;
             voices[note].velocity = 100;
             voices[note].sustained = false;
             voices[note].keydown = true;
@@ -836,8 +844,6 @@ void DexedAudioProcessor::keydown() {
         }
         note = (note + 1) % MAX_ACTIVE_NOTES;
     }
- 
-    voices[note].live = true;
 }
 
 void DexedAudioProcessor::keyup() {
