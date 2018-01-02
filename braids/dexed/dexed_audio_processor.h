@@ -28,7 +28,6 @@
 #include "lfo.h"
 #include "synth.h"
 #include "fm_core.h"
-#include "PluginParam.h"
 // #include "PluginData.h"
 // #include "PluginFx.h"
 // #include "SysexComm.h"
@@ -61,26 +60,10 @@ class DexedAudioProcessor
 
     // The original DX7 had one single LFO. Later units had an LFO per note.
     Lfo lfo;
-
-    bool sustain;
-    
-    /**
-     * Plugin fx (the filter)
-     */
-    //PluginFx fx;
-
-    /**
-     * This flag is used in the audio thread to know if the voice has changed
-     * and needs to be updated.
-     */
-    bool refreshVoice;
     
     void keydown();
     void keyup();
-    
     void initCtrl();
-
-    uint32_t engineType;
         
     void resolvAppDir();
     
@@ -95,7 +78,7 @@ class DexedAudioProcessor
 public :
     // in MIDI units (0x4000 is neutral)
     Controllers controllers;
-    uint8_t data[161];
+    const uint8_t *data;
 
     bool monoMode;
 
@@ -106,10 +89,6 @@ public :
     // SysexComm sysexComm;
     VoiceStatus voiceStatus;
     
-    float vuSignal;
-    bool showKeyboard;
-    int getEngineType();
-    void setEngineType(int rs);
     void setDxValue(int offset, int v);
 
     //==============================================================================
@@ -127,6 +106,7 @@ public :
     
     void updateProgramFromSysex(const uint8_t *rawdata);
     void setupStartupCart();
+    char *patchName();
 
     //================ Braids
     inline void set_pitch(int16_t pitch) {

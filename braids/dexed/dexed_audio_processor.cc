@@ -21,7 +21,6 @@
 #include <stdarg.h>
 #include <bitset>
 
-#include "PluginParam.h"
 #include "dexed_audio_processor.h"
 
 #include "Dexed.h"
@@ -34,8 +33,7 @@
 #include "aligned_buf.h"
 #include "fm_op_kernel.h"
 
-//FmCore fmCore;
- EngineMkI engineMkI;
+EngineMkI engineMkI;
 
 //==============================================================================
 DexedAudioProcessor::DexedAudioProcessor() {
@@ -50,35 +48,13 @@ DexedAudioProcessor::DexedAudioProcessor() {
     curShape = -1;
         
     TRACE("controler %s", controllers.opSwitch);
-    
-    showKeyboard = true;
-    
+        
     memset(&voiceStatus, 0, sizeof(VoiceStatus));
 }
 
 DexedAudioProcessor::~DexedAudioProcessor() {
     TRACE("Bye");
 }
-
-// const unsigned char init_voice[] = {
-// 49, 99, 28, 68, 98, 98, 91, 0, 39, 54, 50, 1, 1, 4, 0, 2, 82, 0, 1, 0, 7, 
-// 77, 36, 41, 71, 99, 98, 98, 0, 39, 0, 0, 3, 3, 0, 0, 2, 98, 0, 1, 0, 8, 
-// 77, 36, 41, 71, 99, 98, 98, 0, 39, 0, 0, 3, 3, 0, 0, 2, 99, 0, 1, 0, 7, 
-// 77, 76, 82, 71, 99, 98, 98, 0, 39, 0, 0, 3, 3, 0, 0, 2, 99, 0, 1, 0, 5, 
-// 62, 51, 29, 71, 82, 95, 96, 0, 27, 0, 7, 3, 1, 0, 0, 0, 86, 0, 0, 0, 14, 
-// 72, 76, 99, 71, 99, 88, 96, 0, 39, 0, 14, 3, 3, 0, 0, 0, 98, 0, 0, 0, 14, 
-// 84, 95, 95, 60, 50, 50, 50, 50, 21, 7, 1, 37, 0, 5, 0, 0, 4, 3, 24, 66, 82, 
-// 65, 83, 83, 32, 32, 32, 49, 32, 1, 1, 1, 1, 1, 1};
-
-// const char init_voice[] =  {
-// 99, 32, 98, 62, 99, 67, 52, 0, 7, 0, 0, 0, 0, 0, 3, 7, 41, 0, 6, 27, 7, 
-// 65, 86, 98, 62, 98, 0, 98, 0, 0, 0, 0, 0, 0, 0, 1, 0, 61, 0, 5, 0, 14, 
-// 38, 17, 99, 61, 89, 10, 43, 0, 0, 0, 0, 0, 0, 0, 1, 0, 72, 0, 0, 1, 7, 
-// 54, 56, 28, 64, 92, 99, 99, 0, 36, 0, 0, 0, 0, 0, 3, 0, 99, 0, 1, 0, 7, 
-// 51, 17, 99, 61, 89, 10, 43, 0, 0, 0, 0, 0, 0, 0, 1, 0, 99, 0, 1, 0, 7, 
-// 54, 56, 28, 64, 92, 87, 0, 0, 36, 0, 0, 0, 0, 0, 3, 0, 99, 0, 0, 0, 0, 
-// 94, 67, 95, 60, 50, 50, 50, 50, 0, 7, 0, 42, 57, 6, 60, 0, 4, 2, 36, 72, 82, 
-// 77, 78, 67, 65, 50, 32, 66, 67, 1, 1, 1, 1, 1, 1};
 
 const unsigned char pgm0[] = {
 49, 99, 28, 68, 98, 98, 91, 0, 39, 54, 50, 1, 1, 4, 0, 2, 82, 0, 1, 0, 7, 
@@ -737,11 +713,13 @@ void DexedAudioProcessor::set_shape(int i) {
     }
     curShape = i;
     if (i > 63) { i = 63; }
-    const unsigned char *pgm = pgms[i];
-    for(unsigned int i=0;i<161;i++) {
-        data[i] = pgm[i];
-    }
+    data = &pgms[i][0];
+
     reset();
+}
+
+char *DexedAudioProcessor::patchName() {
+    return (char *) &data[118];
 }
 
 void DexedAudioProcessor::reset() {
@@ -759,19 +737,15 @@ void DexedAudioProcessor::reset() {
     controllers.aftertouch_cc = 0;
 
     extra_buf_size = 0;
-    
-    sustain = false;
-    
+        
     lfo.reset(data + 137);
 }
 
 //==============================================================================
 void DexedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) {
-    //Freqlut::init(sampleRate);
     Lfo::init(sampleRate);
     PitchEnv::init(sampleRate);
     Env::init_sr(sampleRate);
-    //fx.init(sampleRate);
 
     set_shape(0);
 }
@@ -779,15 +753,6 @@ void DexedAudioProcessor::prepareToPlay(double sampleRate, int samplesPerBlock) 
 void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelData, size_t origSamples) {
     unsigned int i;
     unsigned int numSamples = origSamples >> 1;
-
-    if ( refreshVoice ) {
-        for(i=0;i < MAX_ACTIVE_NOTES;i++) {
-            if ( voices[i].live )
-                voices[i].dx7_note.update(data, pitch_, voices[i].velocity, false);
-        }
-        lfo.reset(data + 137);
-        refreshVoice = false;
-    }
 
     if (pitch_ != voices[0].braids_pitch) {
         for(i=0;i < MAX_ACTIVE_NOTES;i++) {
@@ -911,14 +876,12 @@ void DexedAudioProcessor::Render(const uint8_t* sync_buffer, int16_t* channelDat
 // }
 
 void DexedAudioProcessor::keydown() {
-    uint8_t velo = 100; //(parameter_[0] + 32768) >> 9;
-    
     int note = 0;
     for (int i=0; i<MAX_ACTIVE_NOTES; i++) {
         if (!voices[note].keydown) {
             lfo.keydown();  // TODO: should only do this if # keys down was 0
-            voices[note].velocity = velo;
-            voices[note].sustained = sustain;
+            voices[note].velocity = 100;
+            voices[note].sustained = false;
             voices[note].keydown = true;
             voices[note].braids_pitch = pitch_;
             voices[note].dx7_note.init(data, pitch_, velo);
@@ -948,11 +911,7 @@ void DexedAudioProcessor::keyup() {
         return;
     }
     
-    if ( sustain ) {
-        voices[note].sustained = true;
-    } else {
-        voices[note].dx7_note.keyup();
-    }
+    voices[note].dx7_note.keyup();
 }
 
 void DexedAudioProcessor::panic() {
@@ -961,8 +920,4 @@ void DexedAudioProcessor::panic() {
         voices[i].live = false;
         voices[i].dx7_note.oscSync();
     }
-}
-
-int DexedAudioProcessor::getEngineType() {
-    return engineType;
 }
