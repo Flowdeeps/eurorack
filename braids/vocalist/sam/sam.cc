@@ -1,6 +1,4 @@
-#include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
 #include "debug.h"
 #include "sam.h"
 #include "render.h"
@@ -356,24 +354,18 @@ void SAM::Code41240() {
 
 void SAM::ChangeRule(unsigned char position, unsigned char rule,unsigned char mem60, unsigned char mem59, unsigned char stress, const char * descr)
 {
-  if (debug) printf("RULE: %s\n",descr);
   phonemeindex[position] = rule;
   Insert(position+1, mem60, mem59, stress);
 }
 
 void SAM::drule(const char * str) {
-  if (debug) printf("RULE: %s\n",str);
 }
 
 void SAM::drule_pre(const char *descr, unsigned char X) {
   drule(descr);
-  if (debug) printf("PRE\n");
-  if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]],  phonemeLength[X]);
-}
+ }
 
 void SAM::drule_post(unsigned char X) {
-  if (debug) printf("POST\n");
-  if (debug) printf("phoneme %d (%c%c) length %d\n", X, signInputTable1[phonemeindex[X]], signInputTable2[phonemeindex[X]], phonemeLength[X]);
 }
 
 // Rewrites the phonemes using the following rules:
@@ -464,10 +456,7 @@ void SAM::Parser2() {
   unsigned char pos = 0; //mem66;
   unsigned char p;
 
-  if (debug) printf("Parser2\n");
-
   while((p = phonemeindex[pos]) != END) {
-    if (debug) printf("%d: %c%c\n", pos, signInputTable1[p], signInputTable2[p]);
 
     if (p == 0) { // Is phoneme pause?
       ++pos;
@@ -525,7 +514,6 @@ void SAM::Parser2() {
   //      S KX -> S GX
   // Examples: SPY, STY, SKY, SCOWL
 
-  if (debug) printf("RULE: S* %c%c -> S* %c%c\n", signInputTable1[p], signInputTable2[p],signInputTable1[p-12], signInputTable2[p-12]);
   phonemeindex[pos] = p-12;
 } else if (!(pf & FLAG_PLOSIVE)) {
   p = phonemeindex[pos];

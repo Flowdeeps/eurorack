@@ -1,6 +1,3 @@
-#include <stdlib.h>
-#include <stdio.h>
-
 #include "sam.h"
 #include "RenderTabs.h"
 

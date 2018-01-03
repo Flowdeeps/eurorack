@@ -45,9 +45,9 @@
 
 #include "braids/quantizer_scales.h"
 
-//#include "renaissance.h"
-#include "dexed/dexed_audio_processor.h"
-#include "vocalist/vocalist.h"
+#include "renaissance.h"
+//#include "dexed/dexed_audio_processor.h"
+//#include "vocalist/vocalist.h"
 
 // #define PROFILE_RENDER 1
 
@@ -71,9 +71,9 @@ System sys;
 VcoJitterSource jitter_source;
 Ui ui;
 
-//Renaissance osc;
+Renaissance osc;
 //DexedAudioProcessor osc;
-Vocalist osc;
+//Vocalist osc;
 
 uint8_t current_scale = 0xff;
 size_t current_sample;

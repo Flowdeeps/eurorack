@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "render.h"
 
 #include "RenderTabs.h"
@@ -60,7 +58,6 @@ unsigned char SAM::Read(unsigned char p, unsigned char Y)
 		case 173: return amplitude2[Y];
 		case 174: return amplitude3[Y];
 	}
-	printf("Error reading to tables");
 	return 0;
 }
 
@@ -77,7 +74,6 @@ void SAM::Write(unsigned char p, unsigned char Y, unsigned char value)
 		case 173: amplitude2[Y] = value;  return;
 		case 174: amplitude3[Y] = value;  return;
 	}
-	printf("Error writing to tables\n");
 }
 
 
@@ -85,7 +81,12 @@ void SAM::Write(unsigned char p, unsigned char Y, unsigned char value)
 void SAM::interpolate(unsigned char width, unsigned char table, unsigned char frame, unsigned char mem53)
 {
 	unsigned char sign      = ((char)(mem53) < 0);
-	unsigned char remainder = abs((char)mem53) % width;
+	unsigned char remainder;
+	if (sign) {
+		remainder = (char) (mem53 * -1) % width;
+	} else {
+		remainder = (char) mem53 % width;
+	}
 	unsigned char div       = (unsigned char)((char)(mem53) / width);
 
 	unsigned char error = 0;
