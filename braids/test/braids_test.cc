@@ -18,7 +18,7 @@
 #include <cstring>
 #include <cstdlib>
 
-#include "braids/dexed/dexed_audio_processor.h"
+#include "braids/renaissance.h"
 #include "braids/vocalist/vocalist.h"
 #include "braids/quantizer.h"
 #include "stmlib/test/wav_writer.h"
@@ -27,26 +27,26 @@
 using namespace braids;
 using namespace stmlib;
 
-const uint32_t kSampleRate = 48000;
+const uint32_t kSampleRate = 96000;
 const uint16_t kAudioBlockSize = 24;
 
-void TestDexed() {
-  DexedAudioProcessor osc;
+void TestRenaissance() {
+  Renaissance osc;
 
   WavWriter wav_writer(1, kSampleRate, 64*4);
   wav_writer.Open("oscillator.wav");
 
-  osc.prepareToPlay(48000, kAudioBlockSize);
+  osc.init(96000, kAudioBlockSize);
 
-  for (int shape = 20; shape < 50; shape++) {
+  for (int shape = 0; shape < 30; shape++) {
     printf("Shape %d\n", shape);
     osc.set_shape(shape);
     int n = 20;
-    for (uint32_t i = 0; i < kSampleRate * 2 / kAudioBlockSize; ++i) {
-      if ((i % 300) == 190) {
+    for (uint32_t i = 0; i < kSampleRate * 4 / kAudioBlockSize; ++i) {
+      if ((i % 3000) == 1900) {
         osc.set_gatestate(false);
       }
-      if ((i % 300) == 0) {
+      if ((i % 3000) == 0) {
         osc.set_pitch((n << 7));
         n+=12;
         osc.Strike();
@@ -69,39 +69,6 @@ void TestDexed() {
   }
 }
 
-void TestVocalist() {
-  Vocalist osc;
-
-  WavWriter wav_writer(1, 96000, 10);
-  wav_writer.Open("vocalist.wav");
-
-    int n = 20;
-    for (uint32_t i = 0; i < kSampleRate * 10 / kAudioBlockSize; ++i) {
-      if ((i % 3000) == 1900) {
-        osc.set_gatestate(false);
-      }
-      if ((i % 3000) == 0) {
-        //osc.set_pitch((n << 7));
-        n+=12;
-       // osc.Strike();
-        osc.set_gatestate(true);
-      }
-      //osc.set_pitch((n << 7) + rand() % 20);
-      int16_t buffer[kAudioBlockSize];
-      uint8_t sync_buffer[kAudioBlockSize];
-      uint16_t tri = i/2 % 65535;
-      uint16_t tri2 = (i/3) % 65535;
-      uint16_t ramp = i * 150;
-      tri = tri > 32767 ? 65535 - tri : tri;
-      tri2 = tri2 > 32767 ? 65535 - tri2 : tri2;
-      //osc.set_parameters(tri, tri2);
-      memset(sync_buffer, 0, sizeof(sync_buffer));
-      //sync_buffer[0] = (i % 32) == 0 ? 1 : 0;
-      osc.FillBuffer(buffer, kAudioBlockSize);
-      wav_writer.WriteFrames(buffer, kAudioBlockSize);
-    }
-}
-
 void TestQuantizer() {
   Quantizer q;
   q.Init();
@@ -112,7 +79,5 @@ void TestQuantizer() {
 }
 
 int main(void) {
-  // TestQuantizer();
-  //TestAudioRendering();
-  TestVocalist();
+  TestRenaissance();
 }

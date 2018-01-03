@@ -45,8 +45,10 @@
 
 #include "braids/quantizer_scales.h"
 
+//#include "renaissance.h"
 #include "dexed/dexed_audio_processor.h"
 #include "vocalist/vocalist.h"
+
 // #define PROFILE_RENDER 1
 
 using namespace braids;
@@ -68,8 +70,10 @@ SignatureWaveshaper ws;
 System sys;
 VcoJitterSource jitter_source;
 Ui ui;
-DexedAudioProcessor osc;
-Vocalist vocalist;
+
+//Renaissance osc;
+//DexedAudioProcessor osc;
+Vocalist osc;
 
 uint8_t current_scale = 0xff;
 size_t current_sample;
@@ -157,7 +161,7 @@ void Init() {
   //osc.Init();
   quantizer.Init();
   internal_adc.Init();
-  vocalist.SetMode(0);
+  osc.init(96000, kBlockSize);
 
   for (size_t i = 0; i < kNumBlocks; ++i) {
     fill(&audio_samples[i][0], &audio_samples[i][kBlockSize], 0);
@@ -168,7 +172,6 @@ void Init() {
   current_sample = 0;
   
   envelope.Init();
-  osc.prepareToPlay(48000, kBlockSize);
 
   ws.Init(GetUniqueId(1));
   jitter_source.Init();

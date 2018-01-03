@@ -23,6 +23,8 @@
 
 // #include "../JuceLibraryCode/JuceHeader.h"
 
+#define NUM_DEXED_PATCHES 32
+
 #include "controllers.h"
 #include "dx7note.h"
 #include "lfo.h"
@@ -97,13 +99,13 @@ public :
     void set_shape(int i);
     void reset();
 
-    void prepareToPlay (double sampleRate, int samplesPerBlock);
+    void init (int sampleRate, int samplesPerBlock);
     void releaseResources();
     void panic();
     
     void updateProgramFromSysex(const uint8_t *rawdata);
     void setupStartupCart();
-    char *patchName();
+    const char *patchName();
 
     //================ Braids
     inline void set_pitch(int16_t pitch) {

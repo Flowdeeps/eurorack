@@ -1,6 +1,8 @@
 #ifndef RENDERTABS_H
 #define RENDERTABS_H
 
+extern "C" {
+
 extern const unsigned char tab48426[];
 extern const unsigned char tab47492[];
 extern const unsigned char amplitudeRescale[];
@@ -70,5 +72,8 @@ extern const unsigned char multtable[];
 
 //random data ?
 extern const unsigned char sampleTable[];
+
+}
+
 
 #endif

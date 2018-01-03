@@ -4,8 +4,12 @@
 #include "vocalist.h"
 #include "wordlist.h"
 
-void Vocalist::SetBank(unsigned char b) {
-  bank = b;
+void Vocalist::init(int sampleRate, int samplesPerBlock) {
+  SetMode(0);
+}
+
+void Vocalist::set_shape(int shape) {
+  bank = shape;
 }
 
 void Vocalist::SetWord(unsigned char w) {
@@ -37,7 +41,7 @@ void Vocalist::LoadRando() {
   sam.PrepareFrames();
 }
 
-void Vocalist::FillBuffer(int16_t *output, int bufferLen) {
+void Vocalist::Render(const uint8_t *sync_buffer, int16_t *output, int bufferLen) {
   unsigned char buffer[6];
   int len = bufferLen >> 2;
 

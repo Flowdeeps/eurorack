@@ -22,7 +22,8 @@ CC_FILES       = dexed_audio_processor.cc \
 		vocalist.cc \
 		sin.cc \
 		reciter.cc sam.cc render.cc debug.cc processframes.cc \
-		createtransitions.cc rendertabs.cc wordlist.cc
+		createtransitions.cc rendertabs.cc wordlist.cc \
+		renaissance.cc
 
 OBJ_FILES      = $(CC_FILES:.cc=.o)
 OBJS           = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)
