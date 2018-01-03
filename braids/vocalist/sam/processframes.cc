@@ -39,7 +39,7 @@ void SAM::InitFrameProcessor() {
   tinyBufferPos = 0;
 }
 
-int SAM::Drain(int threshold, int count, int16_t *buffer)
+int SAM::Drain(int threshold, int count, uint8_t *buffer)
 {
   int available = (tinyBufferPos / 50) - threshold;
   if (available <= 0) {
@@ -51,7 +51,7 @@ int SAM::Drain(int threshold, int count, int16_t *buffer)
 
   // consume N sound bytes
   for (int k = 0; k < available; k++) {
-    buffer[k] = tinyBuffer[k] << 8;
+    buffer[k] = tinyBuffer[k];
   }
 
   // move buffer to the left. This could be removed if we implemented a ring buffer with mod in Output
@@ -67,7 +67,7 @@ int SAM::Drain(int threshold, int count, int16_t *buffer)
   return available;
 }
 
-int SAM::FillBufferFromFrame(int count, int16_t *buffer)
+int SAM::FillBufferFromFrame(int count, uint8_t *buffer)
 {
   int written = 0;
   while(framesRemaining && written < count) {

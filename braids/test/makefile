@@ -1,4 +1,4 @@
-PACKAGES       = braids/test stmlib/utils braids braids/dexed
+PACKAGES       = braids/test stmlib/utils braids braids/dexed braids/vocalist braids/vocalist/sam
 
 VPATH          = $(PACKAGES)
 
@@ -19,7 +19,10 @@ CC_FILES       = dexed_audio_processor.cc \
 		pitchenv.cc \
 		env.cc \
 		fm_op_kernel.cc \
-		sin.cc
+		vocalist.cc \
+		sin.cc \
+		reciter.cc sam.cc render.cc debug.cc processframes.cc \
+		createtransitions.cc rendertabs.cc wordlist.cc
 
 OBJ_FILES      = $(CC_FILES:.cc=.o)
 OBJS           = $(patsubst %,$(BUILD_DIR)%,$(OBJ_FILES)) $(STARTUP_OBJ)
@@ -32,7 +35,7 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)%.o: %.cc
-	g++ -c -DTEST -g -Wall -Werror -Wno-unused-variable -I. $< -o $@
+	g++ -c -DTEST -g -Wall -Werror -Wno-narrowing -Wno-unused-variable -I. $< -o $@
 
 $(BUILD_DIR)%.d: %.cc
 	g++ -MM -DTEST -I. $< -MF $@ -MT $(@:.d=.o)

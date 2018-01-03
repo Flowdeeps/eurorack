@@ -46,6 +46,7 @@
 #include "braids/quantizer_scales.h"
 
 #include "dexed/dexed_audio_processor.h"
+#include "vocalist/vocalist.h"
 // #define PROFILE_RENDER 1
 
 using namespace braids;
@@ -68,6 +69,7 @@ System sys;
 VcoJitterSource jitter_source;
 Ui ui;
 DexedAudioProcessor osc;
+Vocalist vocalist;
 
 uint8_t current_scale = 0xff;
 size_t current_sample;
@@ -155,7 +157,8 @@ void Init() {
   //osc.Init();
   quantizer.Init();
   internal_adc.Init();
-  
+  vocalist.SetMode(0);
+
   for (size_t i = 0; i < kNumBlocks; ++i) {
     fill(&audio_samples[i][0], &audio_samples[i][kBlockSize], 0);
     fill(&sync_samples[i][0], &sync_samples[i][kBlockSize], 0);

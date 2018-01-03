@@ -3,9 +3,9 @@
 #include <ctype.h>
 #include <string.h>
 
-#include "../vocalist/sam/reciter.h"
-#include "../vocalist/sam/sam.h"
-#include "../vocalist/sam/debug.h"
+#include "../sam/reciter.h"
+#include "../sam/sam.h"
+#include "../sam/debug.h"
 
 void PrintUsage()
 {

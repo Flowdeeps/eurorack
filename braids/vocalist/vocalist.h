@@ -15,6 +15,10 @@ public:
     word = 0;
     risingEdge = 0;
     mode = MODE_NORMAL;
+    SetPitch(80);
+    SetSpeed(72);
+    SetThroat(128);
+    SetMouth(128);
     sam.InitFrameProcessor();
     sam.EnableSingmode();
   }

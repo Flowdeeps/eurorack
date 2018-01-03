@@ -37,31 +37,42 @@ void Vocalist::LoadRando() {
   sam.PrepareFrames();
 }
 
-void Vocalist::FillBuffer(int16_t *output, int len) {
+void Vocalist::FillBuffer(int16_t *output, int bufferLen) {
+  unsigned char buffer[6];
+  int len = bufferLen >> 2;
+
   if (risingEdge) {
     Load();
     risingEdge = false;
-  }
-  if (!playing && gatestate) {
     playing = true;
   }
 
   int written = 0;
   if (playing) {
-    written = sam.FillBufferFromFrame(len, &output[0]);
-  }
+    written = sam.FillBufferFromFrame(len, &buffer[0]);
 
-  if (written < len) {
-    if (mode == MODE_NORMAL) {
-      playing = false;
-      SetWord((word + 1) % NUM_WORDS);
-    } else {
-      LoadRando();
+    if (written < len) {
+      if (mode == MODE_NORMAL) {
+        playing = false;
+        SetWord((word + 1) % NUM_WORDS);
+      } else {
+        LoadRando();
+      }
     }
   }
 
   for (int i = written; i < len; i++) {
-    output[i] = 0x80;
+    buffer[i] = 0x80;
+  }
+
+  for (int i = 0; i < 6; i+=1) {
+    int idx = i << 2;
+    int16_t value = (((int16_t) buffer[i])-127) << 8;
+
+    output[idx] = value;
+    output[idx+1] = value;
+    output[idx+2] = value;
+    output[idx+3] = value; 
   }
 }
 

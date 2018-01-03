@@ -2,6 +2,7 @@
 #define SAM_H
 
 typedef short int16_t;
+typedef unsigned char uint8_t;
 
 class SAM {
 
@@ -72,8 +73,8 @@ public:
   void InitFrameProcessor();
 
   //void ProcessFrames(unsigned char mem48, int *bufferpos, char *buffer);
-  int Drain(int threshold, int count, int16_t *buffer);
-  int FillBufferFromFrame(int count, int16_t *buffer);
+  int Drain(int threshold, int count, uint8_t *buffer);
+  int FillBufferFromFrame(int count, uint8_t *buffer);
 
   unsigned char ProcessFrame(unsigned char Y, unsigned char mem48, int *bufferpos, char *buffer);
   void CombineGlottalAndFormants(unsigned char phase1, unsigned char phase2, unsigned char phase3, unsigned char Y, int *bufferpos, char *buffer);
