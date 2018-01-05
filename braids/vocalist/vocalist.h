@@ -32,7 +32,7 @@ public:
 
   void SetMode(int m) { mode = m; }
   void set_pitch(uint16_t braids_pitch) { 
-    sam.SetPitch(82 + (64 - (braids_pitch >> 9));
+    sam.SetPitch(82 + (64 - (braids_pitch >> 9)));
   }
   void set_parameters(uint16_t parameter1, uint16_t parameter2) {
     SetSpeed(72 + (parameter2 >> 8) - 64);
