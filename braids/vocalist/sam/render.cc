@@ -23,30 +23,30 @@ int timetable[5][5] =
   {199, 0, 0, 54, 54}
 };
 
-void SAM::Output(int index, unsigned char A, int *bufferpos, char *buffer)
+void SAM::Output(int index, unsigned char A)
 {
   static unsigned oldtimetableindex = 0;
   int k;
-  (*bufferpos) = (*bufferpos) + timetable[oldtimetableindex][index];
+  tinyBufferSize = tinyBufferSize + timetable[oldtimetableindex][index];
   oldtimetableindex = index;
-  if (((*bufferpos)/50) + 5 >= 5000) {
+  if ((tinyBufferSize/50) + 5 >= 5000) {
     return;
   }
 
   // write a little bit in advance
   for(k=0; k<5; k++) {
-    buffer[(*bufferpos)/50 + k] = (A & 15)*16;
+    tinyBuffer[(tinyBufferStart + (tinyBufferSize/50) + k) % MAX_TINY_BUFFER] = (A & 15)*16;
   }
 }
 
-unsigned char SAM::RenderVoicedSample(unsigned short hi, unsigned char off, unsigned char phase1, int *bufferpos, char *buffer)
+unsigned char SAM::RenderVoicedSample(unsigned short hi, unsigned char off, unsigned char phase1)
 {
   do {
     unsigned char sample = sampleTable[hi+off];
     unsigned char bit = 8;
     do {
-      if ((sample & 128) != 0) Output(3, 26, bufferpos, buffer);
-      else Output(4, 6, bufferpos, buffer);
+      if ((sample & 128) != 0) Output(3, 26);
+      else Output(4, 6);
       sample <<= 1;
     } while(--bit != 0);
     off++;
@@ -54,14 +54,14 @@ unsigned char SAM::RenderVoicedSample(unsigned short hi, unsigned char off, unsi
   return off;
 }
 
-void SAM::RenderUnvoicedSample(unsigned short hi, unsigned char off, unsigned char mem53, int *bufferpos, char *buffer)
+void SAM::RenderUnvoicedSample(unsigned short hi, unsigned char off, unsigned char mem53)
 {
   do {
     unsigned char bit = 8;
     unsigned char sample = sampleTable[hi+off];
     do {
-      if ((sample & 128) != 0) Output(2, 5, bufferpos, buffer);
-      else Output(1, mem53, bufferpos, buffer);
+      if ((sample & 128) != 0) Output(2, 5);
+      else Output(1, mem53);
       sample <<= 1;
     } while (--bit != 0);
   } while (++off != 0);
@@ -122,7 +122,7 @@ void SAM::RenderUnvoicedSample(unsigned short hi, unsigned char off, unsigned ch
 // For voices samples, samples are interleaved between voiced output.
 
 
-void SAM::RenderSample(unsigned char *mem66, unsigned char consonantFlag, unsigned char mem49, int *bufferpos, char *buffer)
+void SAM::RenderSample(unsigned char *mem66, unsigned char consonantFlag, unsigned char mem49)
 {
   // mem49 == current phoneme's index
 
@@ -143,10 +143,10 @@ void SAM::RenderSample(unsigned char *mem66, unsigned char consonantFlag, unsign
   if(pitch == 0) {
     // voiced phoneme: Z*, ZH, V*, DH
     pitch = pitches[mem49] >> 4;
-    *mem66 = RenderVoicedSample(hi, *mem66, pitch ^ 255, bufferpos, buffer);
+    *mem66 = RenderVoicedSample(hi, *mem66, pitch ^ 255);
     return;
   }
-  RenderUnvoicedSample(hi, pitch^255, tab48426[hibyte], bufferpos, buffer);
+  RenderUnvoicedSample(hi, pitch^255, tab48426[hibyte]);
 }
 
 // CREATE FRAMES

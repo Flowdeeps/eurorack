@@ -5,7 +5,17 @@
 #include "wordlist.h"
 
 void Vocalist::init(int sampleRate, int samplesPerBlock) {
-  SetMode(0);
+    playing = false;
+    bank = 0;
+    word = -1;
+    risingEdge = 0;
+    mode = MODE_NORMAL;
+    SetPitch(82);
+    SetSpeed(72);
+    SetThroat(128);
+    SetMouth(128);
+    sam.InitFrameProcessor();
+    sam.EnableSingmode();
 }
 
 void Vocalist::set_shape(int shape) {

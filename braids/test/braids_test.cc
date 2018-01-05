@@ -69,6 +69,37 @@ void TestRenaissance() {
   }
 }
 
+void TestVocalist() {
+  Renaissance osc;
+
+  WavWriter wav_writer(1, kSampleRate, 64*4);
+  wav_writer.Open("oscillator.wav");
+
+  osc.init(96000, kAudioBlockSize);
+  osc.set_shape(0);
+
+  for (int word = 0; word < 16; word++) {
+    printf("word %d\n", word);
+    
+    osc.vocalist.SetWord(word);
+
+    osc.Strike();
+    osc.set_gatestate(true);
+
+    for (uint32_t i = 0; i < 40000/kAudioBlockSize; ++i) {
+      int16_t buffer[kAudioBlockSize];
+      uint8_t sync_buffer[kAudioBlockSize];
+     
+      memset(sync_buffer, 0, sizeof(sync_buffer));
+      //sync_buffer[0] = (i % 32) == 0 ? 1 : 0;
+      osc.Render(sync_buffer, buffer, kAudioBlockSize);
+      wav_writer.WriteFrames(buffer, kAudioBlockSize);
+    }
+
+    osc.set_gatestate(false);
+  }
+}
+
 void TestQuantizer() {
   Quantizer q;
   q.Init();
@@ -79,5 +110,5 @@ void TestQuantizer() {
 }
 
 int main(void) {
-  TestRenaissance();
+  TestVocalist();
 }

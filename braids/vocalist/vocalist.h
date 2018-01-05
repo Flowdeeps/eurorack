@@ -16,17 +16,7 @@ typedef unsigned short uint16_t;
 class Vocalist {
 public:
   Vocalist() {
-    playing = false;
-    bank = 0;
-    word = 0;
-    risingEdge = 0;
-    mode = MODE_NORMAL;
-    SetPitch(80);
-    SetSpeed(72);
-    SetThroat(128);
-    SetMouth(128);
-    sam.InitFrameProcessor();
-    sam.EnableSingmode();
+
   }
 
   ~Vocalist() { }
@@ -41,10 +31,12 @@ public:
   void SetWord(unsigned char b);
 
   void SetMode(int m) { mode = m; }
-  void set_pitch(uint16_t braids_pitch) { sam.SetPitch(braids_pitch >> 8); }
+  void set_pitch(uint16_t braids_pitch) { 
+    sam.SetPitch(82 + (64 - (braids_pitch >> 9));
+  }
   void set_parameters(uint16_t parameter1, uint16_t parameter2) {
-    SetSpeed(parameter1 >> 7);
-    SetThroat(parameter2 >> 7);
+    SetSpeed(72 + (parameter2 >> 8) - 64);
+    SetWord(parameter1 >> 11);
   }
 
   void SetPitch(unsigned char pitch) { sam.SetPitch(pitch); }
@@ -53,7 +45,6 @@ public:
   void SetSpeed(unsigned char speed) { sam.SetSpeed(speed); }
 
 private:
-
   void Load();
   void LoadRando();
 

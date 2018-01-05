@@ -1,7 +1,12 @@
 #include "sam.h"
 #include "RenderTabs.h"
 
-void SAM::CombineGlottalAndFormants(unsigned char phase1, unsigned char phase2, unsigned char phase3, unsigned char Y, int *bufferpos, char *buffer)
+char tinyBuffer[MAX_TINY_BUFFER];
+int tinyBufferSize; // this is in a weird "actual size * 50" unit because that's what the generated code uses elsewhere for some calculations
+int tinyBufferStart; // this is a direct index into tinyBuffer where the ring buffer begins.
+
+
+void SAM::CombineGlottalAndFormants(unsigned char phase1, unsigned char phase2, unsigned char phase3, unsigned char Y)
 {
   unsigned int tmp;
 
@@ -12,7 +17,7 @@ void SAM::CombineGlottalAndFormants(unsigned char phase1, unsigned char phase2, 
   tmp  += 136;
   tmp >>= 4; // Scale down to 0..15 range of C64 audio.
 
-  Output(0, tmp & 0xf, bufferpos, buffer);
+  Output(0, tmp & 0xf);
 }
 
 // PROCESS THE FRAMES
@@ -24,21 +29,17 @@ void SAM::CombineGlottalAndFormants(unsigned char phase1, unsigned char phase2, 
 // To simulate them being driven by the glottal pulse, the waveforms are
 // reset at the beginning of each glottal pulse.
 //
-
-#define MAX_TINY_BUFFER 5000
-char tinyBuffer[MAX_TINY_BUFFER];
-int tinyBufferPos;
-
 void SAM::InitFrameProcessor() {
   frameProcessorPosition = 0;
   glottal_pulse = pitches[0];
   mem38 = glottal_pulse - (glottal_pulse >> 2); // mem44 * 0.75
-  tinyBufferPos = 0;
+  tinyBufferSize = 0;
+  tinyBufferStart = 0;
 }
 
 int SAM::Drain(int threshold, int count, uint8_t *buffer)
 {
-  int available = (tinyBufferPos / 50) - threshold;
+  int available = (tinyBufferSize / 50) - threshold;
   if (available <= 0) {
     return 0;
   }
@@ -48,18 +49,12 @@ int SAM::Drain(int threshold, int count, uint8_t *buffer)
 
   // consume N sound bytes
   for (int k = 0; k < available; k++) {
-    buffer[k] = tinyBuffer[k];
+    buffer[k] = tinyBuffer[(tinyBufferStart+k) % MAX_TINY_BUFFER];
   }
 
   // move buffer to the left. This could be removed if we implemented a ring buffer with mod in Output
-  int max = (tinyBufferPos/50) + 5;
-  if (max >= 5000) {
-    max = 5000;
-  }
-  for (int k = available; k < max; k++) {
-    tinyBuffer[k-available] = tinyBuffer[k];
-  }
-  tinyBufferPos -= (available * 50);
+  tinyBufferSize -= (available * 50);
+  tinyBufferStart = (tinyBufferStart + available) % MAX_TINY_BUFFER;
 
   return available;
 }
@@ -68,7 +63,7 @@ int SAM::FillBufferFromFrame(int count, uint8_t *buffer)
 {
   int written = 0;
   while(framesRemaining && written < count) {
-    unsigned char absorbed = ProcessFrame(frameProcessorPosition, framesRemaining, &tinyBufferPos, &tinyBuffer[0]);
+    unsigned char absorbed = ProcessFrame(frameProcessorPosition, framesRemaining);
     written += Drain(20, count - written, &buffer[written]);
 
     frameProcessorPosition += absorbed;
@@ -80,19 +75,19 @@ int SAM::FillBufferFromFrame(int count, uint8_t *buffer)
   return written;
 }
 
-unsigned char SAM::ProcessFrame(unsigned char Y, unsigned char mem48, int *bufferpos, char *buffer)
+unsigned char SAM::ProcessFrame(unsigned char Y, unsigned char mem48)
 {
     unsigned char flags = sampledConsonantFlag[Y];
     unsigned char absorbed = 0;
 
     // unvoiced sampled phoneme?
     if(flags & 248) {
-      RenderSample(&mem66, flags, Y, bufferpos, buffer);
+      RenderSample(&mem66, flags, Y);
       // skip ahead two in the phoneme buffer
       speedcounter = speed;
       absorbed = 2;
     } else {
-      CombineGlottalAndFormants(phase1, phase2, phase3, Y, bufferpos, buffer);
+      CombineGlottalAndFormants(phase1, phase2, phase3, Y);
 
       speedcounter--;
       if (speedcounter == 0) {
@@ -123,7 +118,7 @@ unsigned char SAM::ProcessFrame(unsigned char Y, unsigned char mem48, int *buffe
         // voiced sampled phonemes interleave the sample with the
         // glottal pulse. The sample flag is non-zero, so render
         // the sample for the phoneme.
-        RenderSample(&mem66, flags, Y + absorbed, bufferpos, buffer);
+        RenderSample(&mem66, flags, Y + absorbed);
       }
     }
 

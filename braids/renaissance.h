@@ -43,7 +43,6 @@ public:
 		vocalist.set_gatestate(gatestate);
 	}
 
-private:
 	Vocalist vocalist;
 	DexedAudioProcessor dexed;
 	int currentShape;

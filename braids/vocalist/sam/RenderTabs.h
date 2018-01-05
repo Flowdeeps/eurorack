@@ -50,7 +50,7 @@ extern unsigned char freq1data[];
 extern unsigned char freq2data[];
 
 //tab45216
-extern const unsigned char freq3data[];
+extern unsigned char freq3data[];
 
 extern const unsigned char ampl1data[];
 

@@ -4,6 +4,11 @@
 typedef short int16_t;
 typedef unsigned char uint8_t;
 
+#define MAX_TINY_BUFFER 5000
+extern char tinyBuffer[MAX_TINY_BUFFER];
+extern int tinyBufferSize; // this is in a weird "actual size * 50" unit because that's what the generated code uses elsewhere for some calculations
+extern int tinyBufferStart; // this is a direct index into tinyBuffer where the ring buffer begins.
+
 class SAM {
 
 public:
@@ -57,13 +62,13 @@ public:
 
   // ---- render.cc
 
-  void Output(int index, unsigned char A, int *bufferpos, char *buffer);
+  void Output(int index, unsigned char A);
   void PrepareFrames();
   void SetMouthThroat(unsigned char mouth, unsigned char throat);
 
-  void RenderSample(unsigned char *mem66, unsigned char consonantFlag, unsigned char mem49, int *bufferpos, char *buffer);
-  unsigned char RenderVoicedSample(unsigned short hi, unsigned char off, unsigned char phase1, int *bufferpos, char *buffer);
-  void RenderUnvoicedSample(unsigned short hi, unsigned char off, unsigned char mem53, int *bufferpos, char *buffer);
+  void RenderSample(unsigned char *mem66, unsigned char consonantFlag, unsigned char mem49);
+  unsigned char RenderVoicedSample(unsigned short hi, unsigned char off, unsigned char phase1);
+  void RenderUnvoicedSample(unsigned short hi, unsigned char off, unsigned char mem53);
   void CreateFrames();
   void RescaleAmplitude();
   void AssignPitchContour();
@@ -76,8 +81,8 @@ public:
   int Drain(int threshold, int count, uint8_t *buffer);
   int FillBufferFromFrame(int count, uint8_t *buffer);
 
-  unsigned char ProcessFrame(unsigned char Y, unsigned char mem48, int *bufferpos, char *buffer);
-  void CombineGlottalAndFormants(unsigned char phase1, unsigned char phase2, unsigned char phase3, unsigned char Y, int *bufferpos, char *buffer);
+  unsigned char ProcessFrame(unsigned char Y, unsigned char mem48);
+  void CombineGlottalAndFormants(unsigned char phase1, unsigned char phase2, unsigned char phase3, unsigned char Y);
 
   // createtransitions.cc
   unsigned char CreateTransitions();

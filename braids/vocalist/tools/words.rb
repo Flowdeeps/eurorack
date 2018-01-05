@@ -5,7 +5,7 @@ banks = [
     "hello",
     "electronic",
     "robot",
-    "yeah",
+    "yahh",
     "harder",
     "faster",
     "better",
