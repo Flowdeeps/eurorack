@@ -23,7 +23,7 @@
 
 // #include "../JuceLibraryCode/JuceHeader.h"
 
-#define NUM_DEXED_PATCHES 64
+#define NUM_DEXED_PATCHES 32
 
 #include "controllers.h"
 #include "dx7note.h"
