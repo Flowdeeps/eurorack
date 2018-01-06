@@ -38,7 +38,7 @@ namespace braids {
 using namespace stmlib;
 
 const SettingsData kInitSettings = {
-  MACRO_OSC_SHAPE_DEX0,
+  MACRO_OSC_SHAPE_SAM1,
   
   RESOLUTION_16_BIT,
   SAMPLE_RATE_96K,
@@ -144,7 +144,10 @@ const char* const zero_to_fifteen_values[] = {
     "  15"};
 
 const char* const algo_values[] = {
-"DX0 ",
+"SAM1",
+"SAM2",
+"SAM3",
+"SAM4",
 "DX1 ",
 "DX2 ",
 "DX3 ",
@@ -177,37 +180,6 @@ const char* const algo_values[] = {
 "DX30",
 "DX31",
 "DX32",
-"DX33",
-"DX34",
-"DX35",
-"DX36",
-"DX37",
-"DX38",
-"DX39",
-"DX40",
-"DX41",
-"DX42",
-"DX43",
-"DX44",
-"DX45",
-"DX46",
-"DX47",
-"DX48",
-"DX49",
-"DX50",
-"DX51",
-"DX52",
-"DX53",
-"DX54",
-"DX55",
-"DX56",
-"DX57",
-"DX58",
-"DX59",
-"DX60",
-"DX61",
-"DX62",
-"DX63"
     // "NAME" // For your algorithm
 };
 
