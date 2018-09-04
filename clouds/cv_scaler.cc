@@ -53,10 +53,16 @@ CvTransformation CvScaler::transformations_[ADC_CHANNEL_LAST] = {
   { false, false, 0.01f },
   // ADC_V_OCT_CV,
   { false, false, 1.00f },
-  // ADC_BLEND_POTENTIOMETER,
+  // ADC_WET_POTENTIOMETER,
   { false, false, 0.05f },
-  // ADC_BLEND_CV,
+  // ADC_WET_CV,
   { false, true, 0.2f },
+  //ADC_STEREO_POTENTIOMETER_CV,
+  { true, false, 0.05f },
+  //ADC_FEEDBACK_POTENTIOMETER_CV,
+  { true, false, 0.05f },
+  //ADC_REVERB_POTENTIOMETER_CV,
+  { true, false, 0.05f },
   // ADC_TEXTURE_POTENTIOMETER,
   { false, false, 0.01f },
   // ADC_TEXTURE_CV,
@@ -129,6 +135,7 @@ float CvScaler::UpdateBlendParameters(float knob_value, float cv) {
 }
 
 void CvScaler::Read(Parameters* parameters) {
+
   for (size_t i = 0; i < ADC_CHANNEL_LAST; ++i) {
     const CvTransformation& transformation = transformations_[i];
     
@@ -139,6 +146,7 @@ void CvScaler::Read(Parameters* parameters) {
     if (transformation.remove_offset) {
       value -= calibration_data_->offset[i];
     }
+
     smoothed_adc_value_[i] += transformation.filter_coefficient * \
         (value - smoothed_adc_value_[i]);
   }
@@ -165,51 +173,30 @@ void CvScaler::Read(Parameters* parameters) {
   parameters->size = smoothed_adc_value_[ADC_SIZE_POTENTIOMETER];
   parameters->size -= smoothed_adc_value_[ADC_SIZE_CV];
   CONSTRAIN(parameters->size, 0.0f, 1.0f);
-
-  float blend_parameter = UpdateBlendParameters(
-	   	  smoothed_adc_value_[ADC_BLEND_POTENTIOMETER],
-		  -smoothed_adc_value_[ADC_BLEND_CV] * 2.0f);
   
-  // Update KAMMERL_MODE parameters
-  CONSTRAIN(blend_parameter, 0.0f, 1.0f);
-  switch (blend_parameter_) {
-  	  case BLEND_PARAMETER_DRY_WET:
-  	     parameters->kammerl.probability = blend_parameter;
-  		 break;
-  	  case BLEND_PARAMETER_STEREO_SPREAD:
-    	 parameters->kammerl.clock_divider = blend_parameter;
-  		 break;
-  	  case BLEND_PARAMETER_FEEDBACK:
-     	 parameters->kammerl.pitch_mode = blend_parameter;
-  		 break;
-  	  case BLEND_PARAMETER_REVERB:
-         parameters->kammerl.distortion = blend_parameter;
-  		 break;
-  	  default:
-  		 break;
-  }
+  // reworked for uBurst expanded
+  
+  parameters->dry_wet = smoothed_adc_value_[ADC_WET_POTENTIOMETER];
+  parameters->dry_wet -= smoothed_adc_value_[ADC_WET_CV];
+  CONSTRAIN(parameters->dry_wet, 0.0f, 1.0f);
 
-  float dry_wet = blend_[BLEND_PARAMETER_DRY_WET];
-  dry_wet += blend_mod_[BLEND_PARAMETER_DRY_WET];
-  dry_wet = dry_wet * 1.05f - 0.025f;
-  CONSTRAIN(dry_wet, 0.0f, 1.0f);
-  parameters->dry_wet = dry_wet;
+  float reverb = smoothed_adc_value_[ADC_REVERB_POTENTIOMETER_CV];
+  CONSTRAIN(reverb, 0.0f, 1.0f);
+  parameters->reverb = reverb;
 
-  float reverb_amount = blend_[BLEND_PARAMETER_REVERB];
-  reverb_amount += blend_mod_[BLEND_PARAMETER_REVERB];
-  CONSTRAIN(reverb_amount, 0.0f, 1.0f);
-  parameters->reverb = reverb_amount;
-
-  float feedback = blend_[BLEND_PARAMETER_FEEDBACK];
-  feedback += blend_mod_[BLEND_PARAMETER_FEEDBACK];
+  float feedback = smoothed_adc_value_[ADC_FEEDBACK_POTENTIOMETER_CV];
   CONSTRAIN(feedback, 0.0f, 1.0f);
   parameters->feedback = feedback;
 
-  float stereo_spread = blend_[BLEND_PARAMETER_STEREO_SPREAD];
-  stereo_spread += blend_mod_[BLEND_PARAMETER_STEREO_SPREAD];
-  CONSTRAIN(stereo_spread, 0.0f, 1.0f);
-  parameters->stereo_spread = stereo_spread;
-  
+  float stereo = smoothed_adc_value_[ADC_STEREO_POTENTIOMETER_CV];
+  CONSTRAIN(stereo, 0.0f, 1.0f);
+  parameters->stereo = stereo;
+
+  parameters->kammerl.probability = parameters->dry_wet;
+  parameters->kammerl.clock_divider = stereo;
+  parameters->kammerl.pitch_mode = feedback;
+  parameters->kammerl.distortion = reverb;
+
   parameters->pitch = stmlib::Interpolate(
       lut_quantized_pitch,
       smoothed_adc_value_[ADC_PITCH_POTENTIOMETER],
