@@ -52,11 +52,17 @@ CvTransformation CvScaler::transformations_[ADC_CHANNEL_LAST] = {
   // ADC_PITCH_POTENTIOMETER,
   { false, false, 0.01f },
   // ADC_V_OCT_CV,
-  { false, false, 1.0f },
-  // ADC_BLEND_POTENTIOMETER,
+  { false, false, 1.00f },
+  // ADC_WET_POTENTIOMETER,
   { false, false, 0.05f },
-  // ADC_BLEND_CV,
+  // ADC_WET_CV,
   { false, true, 0.2f },
+  //ADC_FEEDBACK_POTENTIOMETER_CV,
+  { true, false, 0.01f },
+  //ADC_STEREO_POTENTIOMETER_CV,
+  { true, false, 0.01f },
+  //ADC_REVERB_POTENTIOMETER_CV,
+  { true, false, 0.01f },
   // ADC_TEXTURE_POTENTIOMETER,
   { false, false, 0.01f },
   // ADC_TEXTURE_CV,
@@ -69,60 +75,13 @@ void CvScaler::Init(CalibrationData* calibration_data) {
   calibration_data_ = calibration_data;
   fill(&smoothed_adc_value_[0], &smoothed_adc_value_[ADC_CHANNEL_LAST], 0.0f);
   note_ = 0.0f;
-
-  fill(&blend_[0], &blend_[BLEND_PARAMETER_LAST], 0.0f);
-  fill(&blend_mod_[0], &blend_mod_[BLEND_PARAMETER_LAST], 0.0f);
-  previous_blend_knob_value_ = 0.0f;
-  blend_parameter_ = BLEND_PARAMETER_DRY_WET;
-  blend_knob_quantized_ = -1.0f;
-  blend_knob_touched_ = false;
   
   fill(&previous_trigger_[0], &previous_trigger_[kAdcLatency], false);
   fill(&previous_gate_[0], &previous_gate_[kAdcLatency], false);
 }
 
-void CvScaler::UpdateBlendParameters(float knob_value, float cv) {
-  // Update the blending settings (base value and modulation) from the 
-  // Blend knob and CV.
-  for (int32_t i = 0; i < BLEND_PARAMETER_LAST; ++i) {
-    float target = i == blend_parameter_ ? cv : 0.0f;
-    float coefficient = i == blend_parameter_ ? 0.1f : 0.002f;
-    blend_mod_[i] += coefficient * (target - blend_mod_[i]);
-  }
-  
-  // Determines if the blend knob has been touched.
-  if (blend_knob_quantized_ == -1.0f) {
-    blend_knob_quantized_ = knob_value;
-  }
-  blend_knob_touched_ = fabs(knob_value - blend_knob_quantized_) > 0.02f;
-  if (blend_knob_touched_) {
-    blend_knob_quantized_ = knob_value;
-  }
-  
-  if (previous_blend_knob_value_ == -1.0f) {
-    blend_[blend_parameter_] = knob_value;
-    previous_blend_knob_value_ = knob_value;
-    blend_knob_origin_ = knob_value;
-  }
-  
-  float parameter_value = blend_[blend_parameter_];
-  float delta = knob_value - previous_blend_knob_value_;
-  float skew_ratio = delta > 0.0f
-      ? (1.001f - parameter_value) / (1.001f - previous_blend_knob_value_)
-      : (0.001f + parameter_value) / (0.001f + previous_blend_knob_value_);
-  CONSTRAIN(skew_ratio, 0.1f, 10.0f);
-  if (fabs(knob_value - blend_knob_origin_) < 0.02f) {
-    delta = 0.0f;
-  } else {
-    blend_knob_origin_ = -1.0f;
-  }
-  parameter_value += skew_ratio * delta;
-  CONSTRAIN(parameter_value, 0.0f, 1.0f);
-  blend_[blend_parameter_] = parameter_value;
-  previous_blend_knob_value_ = knob_value;
-}
-
 void CvScaler::Read(Parameters* parameters) {
+
   for (size_t i = 0; i < ADC_CHANNEL_LAST; ++i) {
     const CvTransformation& transformation = transformations_[i];
     
@@ -133,6 +92,7 @@ void CvScaler::Read(Parameters* parameters) {
     if (transformation.remove_offset) {
       value -= calibration_data_->offset[i];
     }
+
     smoothed_adc_value_[i] += transformation.filter_coefficient * \
         (value - smoothed_adc_value_[i]);
   }
@@ -151,31 +111,28 @@ void CvScaler::Read(Parameters* parameters) {
   parameters->size = smoothed_adc_value_[ADC_SIZE_POTENTIOMETER];
   parameters->size -= smoothed_adc_value_[ADC_SIZE_CV];
   CONSTRAIN(parameters->size, 0.0f, 1.0f);
-
-  UpdateBlendParameters(
-      smoothed_adc_value_[ADC_BLEND_POTENTIOMETER],
-      -smoothed_adc_value_[ADC_BLEND_CV] * 2.0f);
   
-  float dry_wet = blend_[BLEND_PARAMETER_DRY_WET];
-  dry_wet += blend_mod_[BLEND_PARAMETER_DRY_WET];
-  dry_wet = dry_wet * 1.05f - 0.025f;
-  CONSTRAIN(dry_wet, 0.0f, 1.0f);
-  parameters->dry_wet = dry_wet;
+  // reworked for uBurst expanded
 
-  float reverb_amount = blend_[BLEND_PARAMETER_REVERB];
-  reverb_amount += blend_mod_[BLEND_PARAMETER_REVERB];
-  CONSTRAIN(reverb_amount, 0.0f, 1.0f);
-  parameters->reverb = reverb_amount;
+  parameters->dry_wet = smoothed_adc_value_[ADC_WET_POTENTIOMETER];
+  parameters->dry_wet -= smoothed_adc_value_[ADC_WET_CV];
+  CONSTRAIN(parameters->dry_wet, 0.0f, 1.0f);
+  previous_dry_wet = parameters->dry_wet;
 
-  float feedback = blend_[BLEND_PARAMETER_FEEDBACK];
-  feedback += blend_mod_[BLEND_PARAMETER_FEEDBACK];
+  float reverb = smoothed_adc_value_[ADC_REVERB_POTENTIOMETER_CV];
+  CONSTRAIN(reverb, 0.0f, 1.0f);
+  parameters->reverb = reverb;
+  previous_reverb = reverb;
+
+  float feedback = smoothed_adc_value_[ADC_FEEDBACK_POTENTIOMETER_CV];
   CONSTRAIN(feedback, 0.0f, 1.0f);
   parameters->feedback = feedback;
+  previous_feedback = feedback;
 
-  float stereo_spread = blend_[BLEND_PARAMETER_STEREO_SPREAD];
-  stereo_spread += blend_mod_[BLEND_PARAMETER_STEREO_SPREAD];
-  CONSTRAIN(stereo_spread, 0.0f, 1.0f);
-  parameters->stereo_spread = stereo_spread;
+  float stereo = smoothed_adc_value_[ADC_STEREO_POTENTIOMETER_CV];
+  CONSTRAIN(stereo, 0.0f, 1.0f);
+  parameters->feedback = stereo;
+  previous_stereo = stereo;
   
   parameters->pitch = stmlib::Interpolate(
       lut_quantized_pitch,
