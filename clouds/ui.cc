@@ -41,42 +41,32 @@ const int32_t kVeryLongPressDuration = 4000;
 
 using namespace stmlib;
 
-void Ui::Init(Settings* settings, CvScaler* cv_scaler,
-		GranularProcessor* processor, Meter* meter) {
-	settings_ = settings;
-	cv_scaler_ = cv_scaler;
-	leds_.Init();
-	switches_.Init();
-
-	processor_ = processor;
-	meter_ = meter;
-	mode_ = UI_MODE_SPLASH;
-
-	const State& state = settings_->state();
-
-	// Sanitize saved settings.
-	cv_scaler_->set_blend_parameter(
-			static_cast<BlendParameter>(state.blend_parameter & 3));
-	processor_->set_quality(state.quality & 3);
-	processor_->set_playback_mode(
-			static_cast<PlaybackMode>(state.playback_mode % PLAYBACK_MODE_LAST));
-	for (int32_t i = 0; i < BLEND_PARAMETER_LAST; ++i) {
-		cv_scaler_->set_blend_value(static_cast<BlendParameter>(i),
-				static_cast<float>(state.blend_value[i]) / 255.0f);
-	}
-	cv_scaler_->UnlockBlendKnob();
+void Ui::Init(
+    Settings* settings,
+    CvScaler* cv_scaler,
+    GranularProcessor* processor,
+    Meter* meter) {
+  settings_ = settings;
+  cv_scaler_ = cv_scaler;
+  leds_.Init();
+  switches_.Init();
+  
+  processor_ = processor;
+  meter_ = meter;
+  mode_ = UI_MODE_SPLASH;
+  
+  const State& state = settings_->state();
+  
+  processor_->set_quality(state.quality & 3);
+  processor_->set_playback_mode(
+      static_cast<PlaybackMode>(state.playback_mode & 3));
 }
 
 void Ui::SaveState() {
-	State* state = settings_->mutable_state();
-	state->blend_parameter = cv_scaler_->blend_parameter();
-	state->quality = processor_->quality();
-	state->playback_mode = processor_->playback_mode();
-	for (int32_t i = 0; i < BLEND_PARAMETER_LAST; ++i) {
-		state->blend_value[i] = static_cast<uint8_t>(cv_scaler_->blend_value(
-				static_cast<BlendParameter>(i)) * 255.0f);
-	}
-	settings_->Save();
+  State* state = settings_->mutable_state();
+  state->quality = processor_->quality();
+  state->playback_mode = processor_->playback_mode();
+  settings_->Save();
 }
 
 void Ui::Poll() {
@@ -115,104 +105,93 @@ void Ui::Poll() {
 }
 
 void Ui::PaintLeds() {
-	leds_.Clear();
-	bool blink = (system_clock.milliseconds() & 127) > 64;
-	uint8_t fade = system_clock.milliseconds() >> 1;
-	fade = fade <= 127 ? (fade << 1) : 255 - (fade << 1);
-	fade = static_cast<uint16_t>(fade) * fade >> 8;
-	switch (mode_) {
-	case UI_MODE_SPLASH: {
-		uint8_t index = ((system_clock.milliseconds() >> 8) + 1) & 3;
-		uint8_t fade = (system_clock.milliseconds() >> 2);
-		fade = fade <= 127 ? (fade << 1) : 255 - (fade << 1);
-		leds_.set_intensity(3 - index, fade);
-	}
-		break;
+  leds_.Clear();
+  bool blink = (system_clock.milliseconds() & 127) > 64;
+  uint8_t fade = system_clock.milliseconds() >> 1;
+  fade = fade <= 127 ? (fade << 1) : 255 - (fade << 1);
+  fade = static_cast<uint16_t>(fade) * fade >> 8;
+  switch (mode_) {
+    case UI_MODE_SPLASH:
+      {
+        uint8_t index = ((system_clock.milliseconds() >> 8) + 1) & 3;
+        uint8_t fade = (system_clock.milliseconds() >> 2);
+        fade = fade <= 127 ? (fade << 1) : 255 - (fade << 1);
+        leds_.set_intensity(3 - index, fade);
+      }
+      break;
+      
+    case UI_MODE_VU_METER:
+      leds_.PaintBar(lut_db[meter_->peak() >> 7]);
+      break;
+    
+    case UI_MODE_QUALITY:
+      leds_.set_status(processor_->quality(), 255, 0);
+      break;
+      
+    case UI_MODE_PLAYBACK_MODE:
+      switch (processor_->playback_mode()) {
+      case PLAYBACK_MODE_KAMMERL:
+        for (int32_t i = 0; i < 4; ++i) {
+          leds_.set_status(i, 128 + (fade >> 1), 255 - (fade >> 1));
+        }
+        break;
+      case PLAYBACK_MODE_SPECTRAL_CLOUD:
+        leds_.set_status(0, 128 + (fade >> 1), 255 - (fade >> 1));
+        leds_.set_status(1, 128 + (fade >> 1), 255 - (fade >> 1));
+        leds_.set_status(2, 128 + (fade >> 1), 255 - (fade >> 1));
+        leds_.set_status(3, 0, 0);
+        break;
+      default:
+        leds_.set_status(processor_->playback_mode() % 4, 128 + (fade >> 1),
+            255 - (fade >> 1));
+        break;
+      }
+    break;
+      
+    case UI_MODE_LOAD:
+      leds_.set_status(load_save_location_, 0, blink ? 255 : 0);
+      break;
 
-	case UI_MODE_VU_METER:
-		leds_.PaintBar(lut_db[meter_->peak() >> 7]);
-		break;
+    case UI_MODE_SAVE:
+      leds_.set_status(load_save_location_, blink ? 255 : 0, 0);
+      break;
+    
+    case UI_MODE_SAVING:
+      leds_.set_status(load_save_location_, 255, 0);
+      break;
+      
+    case UI_MODE_CALIBRATION_1:
+      leds_.set_status(0, blink ? 255 : 0, blink ? 255 : 0);
+      leds_.set_status(1, blink ? 255 : 0, blink ? 255 : 0);
+      leds_.set_status(2, 0, 0);
+      leds_.set_status(3, 0, 0);
+      break;
 
-	case UI_MODE_BLEND_METER:
-		for (int32_t i = 0; i < 4; ++i) {
-			leds_.set_intensity(i,
-					cv_scaler_->blend_value(static_cast<BlendParameter>(i))
-							* 255.0f);
-		}
-		break;
-
-	case UI_MODE_QUALITY:
-		leds_.set_status(processor_->quality(), 255, 0);
-		break;
-
-	case UI_MODE_BLENDING:
-		leds_.set_status(cv_scaler_->blend_parameter(), 0, 255);
-		break;
-
-	case UI_MODE_PLAYBACK_MODE:
-		switch (processor_->playback_mode()) {
-		case PLAYBACK_MODE_KAMMERL:
-			for (int32_t i = 0; i < 4; ++i) {
-				leds_.set_status(i, 128 + (fade >> 1), 255 - (fade >> 1));
-			}
-			break;
-		case PLAYBACK_MODE_SPECTRAL_CLOUD:
-			leds_.set_status(0, 128 + (fade >> 1), 255 - (fade >> 1));
-			leds_.set_status(1, 128 + (fade >> 1), 255 - (fade >> 1));
-			leds_.set_status(2, 128 + (fade >> 1), 255 - (fade >> 1));
-			leds_.set_status(3, 0, 0);
-			break;
-		default:
-			leds_.set_status(processor_->playback_mode() % 4, 128 + (fade >> 1),
-					255 - (fade >> 1));
-			break;
-		}
-		break;
-
-	case UI_MODE_LOAD:
-		leds_.set_status(load_save_location_, 0, blink ? 255 : 0);
-		break;
-
-	case UI_MODE_SAVE:
-		leds_.set_status(load_save_location_, blink ? 255 : 0, 0);
-		break;
-
-	case UI_MODE_SAVING:
-		leds_.set_status(load_save_location_, 255, 0);
-		break;
-
-	case UI_MODE_CALIBRATION_1:
-		leds_.set_status(0, blink ? 255 : 0, blink ? 255 : 0);
-		leds_.set_status(1, blink ? 255 : 0, blink ? 255 : 0);
-		leds_.set_status(2, 0, 0);
-		leds_.set_status(3, 0, 0);
-		break;
-
-	case UI_MODE_CALIBRATION_2:
-		leds_.set_status(0, blink ? 255 : 0, blink ? 255 : 0);
-		leds_.set_status(1, blink ? 255 : 0, blink ? 255 : 0);
-		leds_.set_status(2, blink ? 255 : 0, blink ? 255 : 0);
-		leds_.set_status(3, blink ? 255 : 0, blink ? 255 : 0);
-		break;
-
-	case UI_MODE_PANIC:
-		leds_.set_status(0, 255, 0);
-		leds_.set_status(1, 255, 0);
-		leds_.set_status(2, 255, 0);
-		leds_.set_status(3, 255, 0);
-		break;
-
-	default:
-		break;
-	}
-
-	leds_.set_freeze(processor_->frozen());
-	if (processor_->bypass()) {
-		leds_.PaintBar(lut_db[meter_->peak() >> 7]);
-		leds_.set_freeze(true);
-	}
-
-	leds_.Write();
+    case UI_MODE_CALIBRATION_2:
+      leds_.set_status(0, blink ? 255 : 0, blink ? 255 : 0);
+      leds_.set_status(1, blink ? 255 : 0, blink ? 255 : 0);
+      leds_.set_status(2, blink ? 255 : 0, blink ? 255 : 0);
+      leds_.set_status(3, blink ? 255 : 0, blink ? 255 : 0);
+      break;
+      
+    case UI_MODE_PANIC:
+      leds_.set_status(0, 255, 0);
+      leds_.set_status(1, 255, 0);
+      leds_.set_status(2, 255, 0);
+      leds_.set_status(3, 255, 0);
+      break;
+      
+    default:
+      break;
+  }
+  
+  leds_.set_freeze(processor_->frozen());
+  if (processor_->bypass()) {
+    leds_.PaintBar(lut_db[meter_->peak() >> 7]);
+    leds_.set_freeze(true);
+  }
+  
+  leds_.Write();
 }
 
 void Ui::FlushEvents() {
@@ -246,154 +225,139 @@ void Ui::OnSecretHandshake() {
 }
 
 void Ui::OnSwitchReleased(const Event& e) {
-	switch (e.control_id) {
-	case SWITCH_FREEZE:
-		break;
+  switch (e.control_id) {
+    case SWITCH_FREEZE:
+      break;
 
-	case SWITCH_MODE:
-		if (e.data >= kVeryLongPressDuration) {
-			mode_ = UI_MODE_PLAYBACK_MODE;
-		} else if (e.data >= kLongPressDuration) {
-			if (mode_ == UI_MODE_QUALITY) {
-				mode_ = UI_MODE_VU_METER;
-			} else {
-				mode_ = UI_MODE_QUALITY;
-			}
-		} else if (mode_ == UI_MODE_VU_METER || mode_ == UI_MODE_BLEND_METER) {
-			mode_ = UI_MODE_BLENDING;
-		} else if (mode_ == UI_MODE_BLENDING) {
-			uint8_t parameter = (cv_scaler_->blend_parameter() + 1) & 3;
-			cv_scaler_->set_blend_parameter(
-					static_cast<BlendParameter>(parameter));
-			SaveState();
-		} else if (mode_ == UI_MODE_QUALITY) {
-			processor_->set_quality((processor_->quality() + 1) & 3);
-			SaveState();
-		} else if (mode_ == UI_MODE_PLAYBACK_MODE) {
-			uint8_t mode = (processor_->playback_mode() + 1)
-					% PLAYBACK_MODE_LAST;
-			processor_->set_playback_mode(static_cast<PlaybackMode>(mode));
-			SaveState();
-		} else if (mode_ == UI_MODE_SAVE || mode_ == UI_MODE_LOAD) {
-			load_save_location_ = (load_save_location_ + 1) & 3;
-		} else {
-			mode_ = UI_MODE_VU_METER;
-		}
-		break;
+    case SWITCH_MODE:
+      if (e.data >= kLongPressDuration) {
+        if (mode_ == UI_MODE_QUALITY) {
+          mode_ = UI_MODE_VU_METER;
+        } else {
+          mode_ = UI_MODE_QUALITY;
+        }
+      } else if (mode_ == UI_MODE_VU_METER) {
+        mode_ = UI_MODE_PLAYBACK_MODE;
+      } else if (mode_ == UI_MODE_QUALITY) {
+        processor_->set_quality((processor_->quality() + 1) & 3);
+        SaveState();
+      } else if (mode_ == UI_MODE_PLAYBACK_MODE) {
+        uint8_t mode = (processor_->playback_mode() + 1) & PLAYBACK_MODE_LAST;
+        processor_->set_playback_mode(static_cast<PlaybackMode>(mode));
+        SaveState();
+      } else if (mode_ == UI_MODE_SAVE || mode_ == UI_MODE_LOAD) {
+        load_save_location_ = (load_save_location_ + 1) & 3;
+      } else {
+        mode_ = UI_MODE_VU_METER;
+      }
+      break;
 
-	case SWITCH_WRITE:
-		if (e.data >= kLongPressDuration && switches_.pressed(SWITCH_MODE)) {
-			press_time_[SWITCH_MODE] = 0;
-			mode_ = UI_MODE_CALIBRATION_1;
-		} else if (mode_ == UI_MODE_CALIBRATION_1) {
-			CalibrateC1();
-		} else if (mode_ == UI_MODE_CALIBRATION_2) {
-			CalibrateC3();
-		} else if (mode_ == UI_MODE_SAVE) {
-			// Get pointers on data chunks to save.
-			PersistentBlock blocks[4];
-			size_t num_blocks = 0;
-
-			mode_ = UI_MODE_SAVING;
-			// Silence the processor during the long erase/write.
-			processor_->set_silence(true);
-			system_clock.Delay(5);
-			processor_->PreparePersistentData();
-			processor_->GetPersistentData(blocks, &num_blocks);
-			settings_->SaveSampleMemory(load_save_location_, blocks,
-					num_blocks);
-			processor_->set_silence(false);
-			load_save_location_ = (load_save_location_ + 1) & 3;
-			mode_ = UI_MODE_VU_METER;
-		} else if (mode_ == UI_MODE_LOAD) {
-			processor_->LoadPersistentData(
-					settings_->sample_flash_data(load_save_location_));
-			load_save_location_ = (load_save_location_ + 1) & 3;
-			mode_ = UI_MODE_VU_METER;
-		} else if (e.data >= kLongPressDuration) {
-			mode_ = UI_MODE_SAVE;
-		} else {
-			mode_ = UI_MODE_LOAD;
-		}
-		break;
-	}
+    case SWITCH_WRITE:
+      if (e.data >= kLongPressDuration && switches_.pressed(SWITCH_MODE)) {
+        press_time_[SWITCH_MODE] = 0;
+        mode_ = UI_MODE_CALIBRATION_1;
+      } else if (mode_ == UI_MODE_CALIBRATION_1) {
+        CalibrateC1();
+      } else if (mode_ == UI_MODE_CALIBRATION_2) {
+        CalibrateC3();
+      } else if (mode_ == UI_MODE_SAVE) {
+        // Get pointers on data chunks to save.
+        PersistentBlock blocks[4];
+        size_t num_blocks = 0;
+        
+        mode_ = UI_MODE_SAVING;
+        // Silence the processor during the long erase/write.
+        processor_->set_silence(true);
+        system_clock.Delay(5);
+        processor_->PreparePersistentData();
+        processor_->GetPersistentData(blocks, &num_blocks);
+        settings_->SaveSampleMemory(load_save_location_, blocks, num_blocks);
+        processor_->set_silence(false);
+        load_save_location_ = (load_save_location_ + 1) & 3;
+        mode_ = UI_MODE_VU_METER;
+      } else if (mode_ == UI_MODE_LOAD) {
+        processor_->LoadPersistentData(settings_->sample_flash_data(
+            load_save_location_));
+        load_save_location_ = (load_save_location_ + 1) & 3;
+        mode_ = UI_MODE_VU_METER;
+      } else if (e.data >= kLongPressDuration) {
+        mode_ = UI_MODE_SAVE;
+      } else {
+        mode_ = UI_MODE_LOAD;
+      }
+      break;
+  }
 }
 
 void Ui::DoEvents() {
-	while (queue_.available()) {
-		Event e = queue_.PullEvent();
-		if (e.control_type == CONTROL_SWITCH) {
-			if (e.data == 0) {
-				OnSwitchPressed(e);
-			} else {
-				if (e.data >= kLongPressDuration && e.control_id == SWITCH_MODE
-						&& switches_.pressed(SWITCH_WRITE)) {
-					press_time_[SWITCH_WRITE] = 0;
-					OnSecretHandshake();
-				} else {
-					OnSwitchReleased(e);
-				}
-			}
-		}
-	}
-
-	if (queue_.idle_time() > 1000 && mode_ == UI_MODE_PANIC) {
-		queue_.Touch();
-		mode_ = UI_MODE_VU_METER;
-	}
-
-	if ((mode_ == UI_MODE_VU_METER || mode_ == UI_MODE_BLEND_METER
-			|| mode_ == UI_MODE_BLENDING) && cv_scaler_->blend_knob_touched()) {
-		queue_.Touch();
-		mode_ = UI_MODE_BLEND_METER;
-	}
-
-	if (queue_.idle_time() > 3000) {
-		queue_.Touch();
-		if (mode_ == UI_MODE_BLENDING || mode_ == UI_MODE_QUALITY
-				|| mode_ == UI_MODE_PLAYBACK_MODE || mode_ == UI_MODE_SAVE
-				|| mode_ == UI_MODE_LOAD || mode_ == UI_MODE_BLEND_METER
-				|| mode_ == UI_MODE_SPLASH) {
-			mode_ = UI_MODE_VU_METER;
-		}
-	}
+  while (queue_.available()) {
+    Event e = queue_.PullEvent();
+    if (e.control_type == CONTROL_SWITCH) {
+      if (e.data == 0) {
+        OnSwitchPressed(e);
+      } else {
+        if (e.data >= kLongPressDuration &&
+            e.control_id == SWITCH_MODE && 
+            switches_.pressed(SWITCH_WRITE)) {
+          press_time_[SWITCH_WRITE] = 0;
+          OnSecretHandshake();
+        } else {
+          OnSwitchReleased(e);
+        }
+      }
+    }
+  }
+  
+  if (queue_.idle_time() > 1000 && mode_ == UI_MODE_PANIC) {
+    queue_.Touch();
+    mode_ = UI_MODE_VU_METER;
+  }
+  
+  if (queue_.idle_time() > 3000) {
+    queue_.Touch();
+    if (mode_ == UI_MODE_QUALITY ||
+        mode_ == UI_MODE_PLAYBACK_MODE || mode_ == UI_MODE_SAVE ||
+        mode_ == UI_MODE_LOAD ||
+        mode_ == UI_MODE_SPLASH) {
+      mode_ = UI_MODE_VU_METER;
+    }
+  }
 }
 
 uint8_t Ui::HandleFactoryTestingRequest(uint8_t command) {
-	uint8_t argument = command & 0x1f;
-	command = command >> 5;
-	uint8_t reply = 0;
-	switch (command) {
-	case FACTORY_TESTING_READ_POT:
-	case FACTORY_TESTING_READ_CV:
-		reply = cv_scaler_->adc_value(argument);
-		break;
-
-	case FACTORY_TESTING_READ_GATE:
-		if (argument <= 2) {
-			return switches_.pressed(argument);
-		} else {
-			return cv_scaler_->gate(argument - 3);
-		}
-		break;
-
-	case FACTORY_TESTING_SET_BYPASS:
-		processor_->set_bypass(argument);
-		break;
-
-	case FACTORY_TESTING_CALIBRATE:
-		if (argument == 0) {
-			mode_ = UI_MODE_CALIBRATION_1;
-		} else if (argument == 1) {
-			CalibrateC1();
-		} else {
-			CalibrateC3();
-			cv_scaler_->set_blend_parameter(static_cast<BlendParameter>(0));
-			SaveState();
-		}
-		break;
-	}
-	return reply;
+  uint8_t argument = command & 0x1f;
+  command = command >> 5;
+  uint8_t reply = 0;
+  switch (command) {
+    case FACTORY_TESTING_READ_POT:
+    case FACTORY_TESTING_READ_CV:
+      reply = cv_scaler_->adc_value(argument);
+      break;
+      
+    case FACTORY_TESTING_READ_GATE:
+      if (argument <= 2) {
+        return switches_.pressed(argument);
+      } else {
+        return cv_scaler_->gate(argument - 3);
+      }
+      break;
+      
+    case FACTORY_TESTING_SET_BYPASS:
+      processor_->set_bypass(argument);
+      break;
+      
+    case FACTORY_TESTING_CALIBRATE:
+      if (argument == 0) {
+        mode_ = UI_MODE_CALIBRATION_1;
+      } else if (argument == 1) {
+        CalibrateC1();
+      } else {
+        CalibrateC3();
+        SaveState();
+      }
+      break;
+  }
+  return reply;
 }
 
 }  // namespace clouds
