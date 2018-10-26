@@ -57,9 +57,9 @@ CvTransformation CvScaler::transformations_[ADC_CHANNEL_LAST] = {
   { false, false, 0.05f },
   // ADC_WET_CV,
   { false, true, 0.2f },
-  //ADC_STEREO_POTENTIOMETER_CV,
-  { true, false, 0.01f },
   //ADC_FEEDBACK_POTENTIOMETER_CV,
+  { true, false, 0.01f },
+  //ADC_STEREO_POTENTIOMETER_CV,
   { true, false, 0.01f },
   //ADC_REVERB_POTENTIOMETER_CV,
   { true, false, 0.01f },
@@ -139,7 +139,7 @@ void CvScaler::Read(Parameters* parameters) {
 
   float stereo = smoothed_adc_value_[ADC_STEREO_POTENTIOMETER_CV];
   CONSTRAIN(stereo, 0.0f, 1.0f);
-  parameters->stereo = stereo;
+  parameters->stereo_spread = stereo;
   previous_stereo = stereo;
 
   parameters->kammerl.probability = parameters->dry_wet;
