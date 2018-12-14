@@ -59,7 +59,7 @@ void Ui::Init(
   
   processor_->set_quality(state.quality & 3);
   processor_->set_playback_mode(
-      static_cast<PlaybackMode>(state.playback_mode & 3));
+      static_cast<PlaybackMode>(state.playback_mode & PLAYBACK_MODE_LAST));
 }
 
 void Ui::SaveState() {
@@ -126,8 +126,8 @@ void Ui::PaintLeds() {
 
     case UI_MODE_BLEND_METER:
       leds_.set_intensity(0, cv_scaler_->previous_dry_wet * 255.0f);
-      leds_.set_intensity(1, cv_scaler_->previous_feedback * 255.0f);
-      leds_.set_intensity(2, cv_scaler_->previous_stereo * 255.0f);
+      leds_.set_intensity(1, cv_scaler_->previous_stereo * 255.0f);
+      leds_.set_intensity(2, cv_scaler_->previous_feedback * 255.0f);
       leds_.set_intensity(3, cv_scaler_->previous_reverb * 255.0f);
 
       break;
@@ -252,7 +252,7 @@ void Ui::OnSwitchReleased(const Event& e) {
         processor_->set_quality((processor_->quality() + 1) & 3);
         SaveState();
       } else if (mode_ == UI_MODE_PLAYBACK_MODE) {
-        uint8_t mode = (processor_->playback_mode() + 1) & PLAYBACK_MODE_LAST;
+        uint8_t mode = (processor_->playback_mode() + 1) % PLAYBACK_MODE_LAST;
         processor_->set_playback_mode(static_cast<PlaybackMode>(mode));
         SaveState();
       } else if (mode_ == UI_MODE_SAVE || mode_ == UI_MODE_LOAD) {
